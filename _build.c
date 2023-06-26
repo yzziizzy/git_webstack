@@ -13,10 +13,13 @@
 
 
 char* sources[] = {
+	"cproc.c",
+	"git_browse.c",
 	"main.c",
 	"net.c",
 	"scgi.c",
 	"sti/sti.c",
+	"strlist.c",
 	NULL,
 };
 
@@ -34,7 +37,7 @@ char* libs_needed[] = {
 
 char* ld_add[] = {
 	"-lm", "-lresolv",
-//	"-ldl", "-lutil",
+	"-lutil",
 	NULL,
 };
 

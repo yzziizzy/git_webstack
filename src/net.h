@@ -15,6 +15,8 @@
 
 struct server;
 
+
+
 typedef struct connection {
 	struct server* srv;
 	int peerfd;
@@ -30,6 +32,9 @@ typedef struct connection {
 	
 	void* user_data;
 	
+	char* write_buf;
+	size_t wb_len, wb_alloc;	
+	
 } connection_t;
 
 
@@ -40,7 +45,9 @@ typedef struct server {
 	
 	VEC(connection_t*) cons;
 	
-	void (*on_accept)(connection_t*);
+	void (*on_accept)(struct server*, connection_t*);
+	
+	void* user_data;
 	
 } server_t;
 
@@ -48,6 +55,6 @@ typedef struct server {
 server_t* server_init(int epollfd, int port);
 void server_tick(server_t* srv, int wait);
 void connection_close(connection_t* con);
-
+void connection_write(connection_t* con, char* s, ssize_t len);
 
 #endif // __GWS__net_h__

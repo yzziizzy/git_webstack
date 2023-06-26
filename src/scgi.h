@@ -8,7 +8,10 @@
 typedef struct {
 	char* key, *value;
 	long numval;
-} req_header;
+} scgi_req_header;
+
+
+struct scgi_server;
 
 typedef struct {
 	char* buf;
@@ -25,12 +28,26 @@ typedef struct {
 	long content_len;
 	long total_len;
 	
-	VEC(req_header) headers;
+	VEC(scgi_req_header) headers;
 	
-} request;
+	struct scgi_server* srv;
+} scgi_request;
+
+typedef void (*scgi_handler_fn)(void* user_data, scgi_request* req, connection_t* con);
+	
+
+typedef struct {
+	server_t* srv;
+	
+	VEC(scgi_request*) requests;
+	
+	scgi_handler_fn handler;
+	
+	void* user_data;
+} scgi_server;
 
 
-server_t* scgi_create(int port);
+scgi_server* scgi_create(int port, void* user_data, scgi_handler_fn handler);
 
 
 

@@ -22,7 +22,7 @@ static void on_data(connection_t* con);
 
 
 static void check_buffer(connection_t* con) {
-	request* req = con->user_data;
+	scgi_request* req = con->user_data;
 	
 	if(!req->buf) {
 		req->buf = malloc(4096);
@@ -36,11 +36,12 @@ static void check_buffer(connection_t* con) {
 	req->buf = realloc(req->buf, req->buf_alloc);
 }
 
-static void accepted(connection_t* con) {
+static void accepted(server_t* srv, connection_t* con) {
 	
 	printf("accepted connection\n");
 	
-	request* req = calloc(1, sizeof(*req));
+	scgi_request* req = calloc(1, sizeof(*req));
+	req->srv = srv->user_data;
 	
 	con->buffer_full = check_buffer;
 	con->got_data = on_data;
@@ -51,7 +52,8 @@ static void accepted(connection_t* con) {
 }
 
 static void on_data(connection_t* con) {
-	request* req = con->user_data;
+	scgi_request* req = con->user_data;
+	scgi_server* cgi = con->srv->user_data;
 	int len;
 	
 	while(1) {
@@ -90,7 +92,7 @@ static void on_data(connection_t* con) {
 				
 				while(s < header_end) {
 					VEC_INC(&req->headers);
-					req_header* header = &VEC_TAIL(&req->headers);
+					scgi_req_header* header = &VEC_TAIL(&req->headers);
 					header->key = strdup(s);
 					s += strlen(s) + 1; // skip the null byte
 					header->value = strdup(s);
@@ -121,12 +123,10 @@ static void on_data(connection_t* con) {
 				return;
 			
 			case REQST_RESPOND: {
-				char* resp = "Status: 200 OK\r\nContent-Type: text/plain\r\n\r\nFoobar\r\n";
 				
-				send(con->peerfd, resp, strlen(resp), 0);
+				cgi->handler(cgi->user_data, req, con);
 				
 				connection_close(con);
-				
 				free(req->buf);
 				free(req);
 				
@@ -138,13 +138,20 @@ static void on_data(connection_t* con) {
 
 
 
-server_t* scgi_create(int port) {
+scgi_server* scgi_create(int port, void* user_data, scgi_handler_fn handler) {
 	int epollfd = epoll_create(16);
-
+	
+	scgi_server* cgi = calloc(1, sizeof(*cgi));
+	cgi->user_data = user_data;
+	cgi->handler = handler;
+	
 	server_t* srv = server_init(epollfd, port);
 	srv->on_accept = accepted;
+	srv->user_data = cgi;
 	
-	return srv;
+	cgi->srv = srv;
+	
+	return cgi;
 }
 
 
