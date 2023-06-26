@@ -22,8 +22,13 @@ int main(int argc, char* argv[]) {
 	a.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &a, NULL);
 
+	if(argc < 2) {
+		printf("usage: %s <path_to_repos>\n", argv[0]);
+		exit(1);
+	}
+
 	repo_meta* rm = calloc(1, sizeof(*rm));
-	rm->path = "/home/izzy/projects"; // because the executable is running from the project's repo
+	rm->path = argv[1];//"/home/izzy/projects"; // because the executable is running from the project's repo
 	rm->static_asset_path = "./webstatic";
 	
 	scgi_server* srv = scgi_create(4999, rm, git_browse_handler);
