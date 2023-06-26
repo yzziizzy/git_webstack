@@ -7,6 +7,8 @@
 typedef struct {
 	char* path;
 
+	char* static_asset_path;
+	
 } repo_meta;
 
 

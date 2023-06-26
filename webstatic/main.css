@@ -1,0 +1,148 @@
+
+
+
+html, body {
+	background-color: #222222;
+	color: #ccccdd;
+	font-size: 12pt;
+	font-family: Sans-Serif;
+	line-height: 1.6em;
+}
+
+body {
+	margin-left: 50px;
+}
+
+table, tr, td {
+	border-collapse: collapse;
+	border: none;
+	text-align: left;
+	padding: 0px;
+}
+
+hr {
+	margin-top: 50px;
+	margin-bottom: 50px;
+	border: 2px solid #555588;
+}
+
+p {
+	margin: 25px 0px;
+}
+
+a {
+	color: #ccccdd;
+	text-decoration: underline;
+	font-weight: bold;
+}
+
+pre {
+	margin: 0;
+	padding: 0;
+}
+
+c, c span {
+	font-family: 'Courier New', monospace;
+	white-space: pre;
+	tab-size: 8;
+	-moz-tab-size: 8;
+}
+
+/* blame user */
+.codelisting tr td:nth-child(1) {
+	padding: 0px 10px;
+	background-color: #111;
+	color: #777;
+	
+	-webkit-user-select: none;  
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+/* line numbers */
+.codelisting tr td:nth-child(2) {
+	padding: 0px 10px;
+	border-left: 1px solid #558;
+	background-color: #282828;
+	
+	-webkit-user-select: none;  
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+/* code */
+.codelisting tr td:nth-child(3) {
+	padding-left: 4px;
+	
+}
+
+
+
+
+/* highlighting colors */
+.lang-c .keyword { color: #A3CCF7; }
+.lang-c .punct{ color: #B1EDEC; }
+.lang-c .string, .lang-c .charlit { color: #55EB54; }
+.lang-c .number { color: #F7BA7E; }
+.lang-c .ident { color: #E0E0E0; }
+.lang-c .type { color: #A3CCF7; }
+.lang-c .preproc { color: #66aadd; }
+.lang-c .comment { color: #787D31; }
+
+.lang-asm .comment { color: #787D31; }
+.lang-asm .ident { color: #E0E0E0; }
+.lang-asm .keyword { color: #A3CCF7; }
+.lang-asm .string { color: #55EB54; }
+.lang-asm .number { color: #F7BA7E; }
+.lang-asm .punct{ color: #B1EDEC; }
+.lang-asm .directive { color: #EDED43; }
+.lang-asm .register{ color: #B1ED43; }
+.lang-asm .simd-register{ color: #43EDB1; }
+.lang-asm .label {color: #66aadd; }
+
+
+
+/* decent default values */
+.js-code-highlight-root, .codelisting {
+	background-color: #3E3E3E;
+	border: 1px solid black;
+	font-size: .9em;
+	tab-size: 4;
+	-moz-tab-size: 4;
+}
+
+.multiline {
+	margin: 10px 0px;
+}
+
+.inline{
+	padding: 0px 5px;
+}
+
+.title {
+	border-bottom: 1px solid black;
+	background: linear-gradient(#999999, #666666);
+	color: #000000;
+	padding-left: 18px;
+	font-weight: bold;
+}
+
+.line-nums {
+	border-right: 1px solid black;
+	background-color: #666666;
+	color: #CCCCDD;
+	text-align: right;
+	padding: 5px 5px 5px 5px;
+}
+
+.code-block {
+	padding: 5px 0 5px 5px;
+	tab-size: 4;
+}
+
+.line {
+	line-height: 1.3em;
+}
+

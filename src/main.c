@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
 
 	repo_meta* rm = calloc(1, sizeof(*rm));
 	rm->path = "./"; // because the executable is running from the project's repo
+	rm->static_asset_path = "./webstatic";
 	
 	scgi_server* srv = scgi_create(4999, rm, git_browse_handler);
 	srv->handler = git_browse_handler;

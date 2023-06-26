@@ -4,17 +4,78 @@
 #include "git_browse.h"
 #include "cproc.h"
 #include <ctype.h>
+#include <sys/stat.h>
+#include <limits.h>
 
 #define cw(x) connection_write(con, x, -1)
 #define cnw(x, l) connection_write(con, x, l)
 
 
 static void html_header(connection_t* con) {
-	cw("<html>\n<head><link type=\"text/css\" href=\"/_/main.css\" />\n<script src=\"/_/main.js\"></script>\n</head>\n<body>\n");
+	cw("<html>\n<head><link rel=\"stylesheet\" type=\"text/css\" href=\"/_/main.css\" />\n<script type=\"text/javascript\" src=\"/_/main.js\"></script>\n</head>\n<body>\n");
 }
 
 static void html_footer(connection_t* con) {
 	cw("\n</body>\n</html>\n");
+}
+
+
+char get_file_type(char* path) {
+	struct stat st;
+	int res = stat(path, &st);
+	if(res) return 0;
+	
+	if(st.st_mode & S_IFDIR) return 'd';
+	if(st.st_mode & S_IFREG) return 'f';
+	if(st.st_mode & S_IFLNK) return 'l';
+	
+	return 0;
+}
+
+char* htmlencode(char* src, ssize_t len) {
+	if(len < 0) len = strlen(src);
+	
+	int replacements = 0;
+	for(int i = 0; src[i] && i < len; i++) {
+		if(strchr("><&", src[i])) replacements++;
+	}
+	
+	if(replacements == 0) {
+		return strndup(src, len);
+	}
+	
+	char* dst = malloc(len + replacements * 5 + 1);
+	
+	int d = 0;
+	for(int i = 0; src[i] && i < len; i++) {
+		switch(src[i]) {
+			case '>':
+				dst[d++] = '&';
+				dst[d++] = 'g';
+				dst[d++] = 't';
+				dst[d++] = ';';
+				break;
+			case '<':
+				dst[d++] = '&';
+				dst[d++] = 'l';
+				dst[d++] = 't';
+				dst[d++] = ';';
+				break;
+			case '&':
+				dst[d++] = '&';
+				dst[d++] = 'a';
+				dst[d++] = 'm';
+				dst[d++] = 'p';
+				dst[d++] = ';';
+				break;
+			default:
+				dst[d++] = src[i];
+		}
+	}
+	
+	dst[d] = 0;
+	
+	return dst;
 }
 
 
@@ -53,7 +114,7 @@ static char* sysstring(char* cmdline) {
 void do_folder(char* path, scgi_request* req, connection_t* con) {
 
 
-	char* cmd = sprintfdup("git ls-tree --name-only HEAD %s", path);
+	char* cmd = sprintfdup("git ls-tree --name-only HEAD %s/", path);
 	char* str = sysstring(cmd);
 	free(cmd);
 	
@@ -70,7 +131,7 @@ void do_folder(char* path, scgi_request* req, connection_t* con) {
 	html_header(con);
 	
 	
-	cw("<table>");
+	cw("<table class=\"dirlisting\">");
 	cw("<tr><th colspan=4>");
 	cw(path);
 	cw("</th></tr>");
@@ -86,7 +147,7 @@ void do_folder(char* path, scgi_request* req, connection_t* con) {
 		cw("<td><a href=\"");
 		cw(*s);
 		cw("\">");
-		cw(*s);
+		cw(strrchr(*s, '/') + 1);
 		cw("</a></td>");
 		
 			cw("<td>");
@@ -126,7 +187,7 @@ void do_file(char* path, scgi_request* req, connection_t* con) {
 	cw(resp);
 	html_header(con);
 	
-	cw("<table>");
+	cw("<table class=\"codelisting lang-c\">");
 	
 	cw("<tr><th colspan=4>");
 	cw(path);
@@ -168,9 +229,11 @@ void do_file(char* path, scgi_request* req, connection_t* con) {
 		cnw(line, line_end - line);
 		cw("</td>\n");
 		
-		cw("<td><pre>");
+		cw("<td><c>");
+		char* textsafe = htmlencode(text, -1);
 		cw(text);
-		cw("</pre></td>\n");
+		free(textsafe);
+		cw("</c></td>\n");
 		
 		
 		cw("</tr>\n");
@@ -214,9 +277,25 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	}
 	
 	if(0 == strncmp(uri, "/_/", 3)) {
-		char* resp = "Status: 404\r\n\r\n";
-		cw(resp);
-		printf("/_/ denied\n");
+		
+		if(strstr(uri, "..")) {
+			printf("'..' found in static asset path request\n");
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		char* testpath = path_join(rm->static_asset_path, uri + 3);
+		
+		size_t slen = 0;
+		char* src = read_whole_file(testpath, &slen);
+		if(!src) {
+			printf("no such static asset '%s'\n", uri);
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		cw("Status: 200\r\n\r\n");
+		cnw(src, slen - 1);
 		return;
 	}
 	
@@ -224,13 +303,28 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	
 	char* path = path_join(rm->path, uri);
 	
-	if(0 == strcmp(path, "/")) {
-		do_folder(".", req, con); 
+	if(strstr(uri, "..")) {
+		printf("'..' found in request uri\n");
+		cw("Status: 404\r\n\r\n");
 		return;
 	}
 	
-	do_file(path, req, con);
 	
+	char type = get_file_type(path);
+	
+	
+	if(type == 'd') {
+		do_folder(path, req, con); 
+		return;
+	}
+	else if(type == 'f') {
+		do_file(path, req, con);
+		return;
+	}
+	else {
+		cw("Status: 404\r\n\r\n");
+		return;
+	}
 
 /*
 	
@@ -248,7 +342,6 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	printf("\n");
 	*/
 	
-	cw("\r\n");
 			
 }
 
