@@ -107,7 +107,7 @@ static void on_data(connection_t* con) {
 						req->total_len = req->content_len + req->header_netstring_len;
 					}
 					
-					printf("Header: %s = %s\n", header->key, header->value);
+					//printf("Header: %s = %s\n", header->key, header->value);
 				}
 				
 				req->state = REQST_RESPOND;
@@ -124,6 +124,7 @@ static void on_data(connection_t* con) {
 			
 			case REQST_RESPOND: {
 				
+				printf("\n start request \n");
 				cgi->handler(cgi->user_data, req, con);
 				
 				connection_close(con);

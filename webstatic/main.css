@@ -62,7 +62,7 @@ c, c span {
 
 /* line numbers */
 .codelisting tr td:nth-child(2) {
-	padding: 0px 10px;
+	padding: 0px 0px;
 	border-left: 1px solid #558;
 	background-color: #282828;
 	
@@ -71,6 +71,18 @@ c, c span {
 	-ms-user-select: none;
 	user-select: none;
 }
+
+.codelisting tr td:nth-child(2) a {
+	text-decoration: none;
+	display: inline-block;
+	width: 100%;
+	text-align: right;
+	padding-right: 10px;
+	padding-left: 5px;
+	box-sizing: border-box;
+}
+
+
 
 /* code */
 .codelisting tr td:nth-child(3) {

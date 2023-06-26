@@ -15,6 +15,7 @@ void strlist_init(strlist* sl) {
 	sl->len = 0;
 	sl->alloc = 32;
 	sl->entries = malloc(sl->alloc * sizeof(*sl->entries));
+	sl->entries[0] = 0;
 }
 
 strlist* strlist_new() {
@@ -72,6 +73,49 @@ char** str_split(char* in, char* splitters) {
 void free_strpp(char** l) {
 	for(char** s = l; *s; s++) free(*s);
 	free(l);
+}
+
+
+
+char* join_str_list(char* list[], char* joiner) {
+	size_t list_len = 0;
+	size_t total = 0;
+	size_t jlen = strlen(joiner);
+	
+	if(list == NULL) return strdup("");
+	
+	// calculate total length
+	for(int i = 0; list[i]; i++) {
+		list_len++;
+		total += strlen(list[i]);
+	}
+	
+	if(total == 0) return strdup("");
+	
+	total += (list_len - 1) * jlen;
+	char* out = malloc((total + 1) * sizeof(*out));
+	
+	char* end = out;
+	for(int i = 0; list[i]; i++) {
+		char* s = list[i];
+		size_t l = strlen(s);
+		
+		if(i > 0) {
+			memcpy(end, joiner, jlen);
+			end += jlen;
+		}
+		
+		if(s) {
+			memcpy(end, s, l);
+			end += l;
+		}
+		
+		total += strlen(list[i]);
+	}
+	
+	*end = 0;
+	
+	return out;
 }
 
 
