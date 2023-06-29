@@ -14,12 +14,17 @@
 
 char* sources[] = {
 	"cproc.c",
+	"git.c",
 	"git_browse.c",
+	"html.c",
+	"init.c",
 	"main.c",
 	"net.c",
 	"scgi.c",
 	"sti/sti.c",
 	"strlist.c",
+	"sys.c",
+	"uri.c",
 	NULL,
 };
 

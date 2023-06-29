@@ -7,116 +7,11 @@
 #include <sys/stat.h>
 #include <limits.h>
 
-#define cw(x) connection_write(con, x, -1)
-#define cnw(x, l) connection_write(con, x, l)
+#include "uri.h"
+#include "sys.h"
+#include "html.h"
 
 
-static void html_header(connection_t* con) {
-	cw("<html>\n<head><link rel=\"stylesheet\" type=\"text/css\" href=\"/_/main.css\" />\n<script type=\"text/javascript\" src=\"/_/main.js\"></script>\n</head>\n<body>\n");
-}
-
-static void html_footer(connection_t* con) {
-	cw("\n</body>\n</html>\n");
-}
-
-
-char get_file_type(char* path) {
-	struct stat st;
-	int res = stat(path, &st);
-	if(res) return 0;
-	
-	if(st.st_mode & S_IFDIR) return 'd';
-	if(st.st_mode & S_IFREG) return 'f';
-	if(st.st_mode & S_IFLNK) return 'l';
-	
-	return 0;
-}
-
-char* htmlencode(char* src, ssize_t len) {
-	if(len < 0) len = strlen(src);
-	
-	int replacements = 0;
-	for(int i = 0; src[i] && i < len; i++) {
-		if(strchr("><&", src[i])) replacements++;
-	}
-	
-	if(replacements == 0) {
-		return strndup(src, len);
-	}
-	
-	char* dst = malloc(len + replacements * 5 + 1);
-	
-	int d = 0;
-	for(int i = 0; src[i] && i < len; i++) {
-		switch(src[i]) {
-			case '>':
-				dst[d++] = '&';
-				dst[d++] = 'g';
-				dst[d++] = 't';
-				dst[d++] = ';';
-				break;
-			case '<':
-				dst[d++] = '&';
-				dst[d++] = 'l';
-				dst[d++] = 't';
-				dst[d++] = ';';
-				break;
-			case '&':
-				dst[d++] = '&';
-				dst[d++] = 'a';
-				dst[d++] = 'm';
-				dst[d++] = 'p';
-				dst[d++] = ';';
-				break;
-			default:
-				dst[d++] = src[i];
-		}
-	}
-	
-	dst[d] = 0;
-	
-	return dst;
-}
-
-
-static char* sysstring(char* cmdline) {
-	struct child_process_info* cpi = exec_cmdline_pipe(cmdline);
-
-	
-	while(1) {	
-		read_cpi(cpi);	
-		
-		int status;
-		// returns 0 if nothing happened, -1 on error, childpid if it exited
-		int pid = waitpid(cpi->pid, &status, WNOHANG);
-		if(pid != 0) {
-			
-			read_cpi(cpi);
-			
-			cpi->output_buffer[cpi->buf_len] = 0;
-			cpi->exit_status = WEXITSTATUS(status);
-			
-			break;
-		}
-		
-		usleep(100);
-	}
-	
-	char* out = cpi->output_buffer;
-
-	free_cpi(cpi, 0);
-	
-	return out;
-}
-
-
-typedef struct {
-	strlist* components;
-	char* fullpath; // dirty atm
-	char* repo_path;
-	char* rel_path;
-
-} path_info;
 
 
 
@@ -156,10 +51,9 @@ void do_project_index(repo_meta* rm, scgi_request* req, connection_t* con) {
 	
 }
 
-void do_folder(path_info* pi, scgi_request* req, connection_t* con) {
+void do_folder(request_info* ri, scgi_request* req, connection_t* con) {
 
-
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/ ls-tree --name-only HEAD ./%s/", pi->repo_path, pi->repo_path, pi->rel_path);
+	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/ ls-tree --name-only HEAD ./%s/", ri->abs_project_path, ri->abs_project_path, ri->branch, ri->rel_file_path);
 	char* str = sysstring(cmd);
 	printf("gitlscmd: '%s'\n", str);
 	free(cmd);
@@ -181,19 +75,19 @@ void do_folder(path_info* pi, scgi_request* req, connection_t* con) {
 	char* a = strdup("");
 	
 	cw("<tr><th colspan=4>/");
-	for(int i = 0; i < pi->components->len; i++) {
-		if(strlen(pi->components->entries[i]) == 0) continue;
-		char* b = path_join(a, pi->components->entries[i]);
+	for(int i = 0; i < ri->file_path_parts->len; i++) {
+		if(strlen(ri->file_path_parts->entries[i]) == 0) continue;
+		char* b = path_join(a, ri->file_path_parts->entries[i]);
 		cw("<a href=\"");
 		cw(b);
 		cw("\">");
-		cw(pi->components->entries[i]);
+		cw(ri->file_path_parts->entries[i]);
 		cw("</a>");
 		
 		free(a);
 		a = b;
 		
-		if(i < pi->components->len - 1) {
+		if(i < ri->file_path_parts->len - 1) {
 			cw("/");
 		}
 	}
@@ -202,7 +96,7 @@ void do_folder(path_info* pi, scgi_request* req, connection_t* con) {
 	free(a);
 	
 	for(char** s = files; *s; s++) {
-		char* cmd = sprintfdup(cmd_fmt, pi->repo_path, pi->repo_path, *s);
+		char* cmd = sprintfdup(cmd_fmt, ri->abs_project_path, ri->abs_project_path, *s);
 		char* res = sysstring(cmd);
 		printf("cmd: %s\n", cmd);
 		free(cmd);
@@ -211,7 +105,7 @@ void do_folder(path_info* pi, scgi_request* req, connection_t* con) {
 		cw("<tr>");
 		
 		cw("<td><a href=\"/");
-		cw(pi->components->entries[1]); cw("/"); cw(*s);
+		cw(ri->file_path_parts->entries[1]); cw("/"); cw(*s);
 		cw("\">");
 		
 		char* w = strrchr(*s, '/');
@@ -240,10 +134,10 @@ void do_folder(path_info* pi, scgi_request* req, connection_t* con) {
 
 }
 
-void do_file(path_info* pi, scgi_request* req, connection_t* con) {
+void do_file(request_info* ri, scgi_request* req, connection_t* con) {
 
 
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/  --no-pager blame -lc %s", pi->repo_path, pi->repo_path, pi->fullpath);
+	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/  --no-pager blame -lc %s", ri->abs_project_path, ri->abs_project_path, ri->rel_file_path);
 	char* str = sysstring(cmd);
 	free(cmd);
 	
@@ -260,19 +154,19 @@ void do_file(path_info* pi, scgi_request* req, connection_t* con) {
 	char* a = strdup("");
 	
 	cw("<tr><th colspan=4>/");
-	for(int i = 0; i < pi->components->len; i++) {
-		if(strlen(pi->components->entries[i]) == 0) continue;
-		char* b = path_join(a, pi->components->entries[i]);
+	for(int i = 0; i < ri->file_path_parts->len; i++) {
+		if(strlen(ri->file_path_parts->entries[i]) == 0) continue;
+		char* b = path_join(a, ri->file_path_parts->entries[i]);
 		cw("<a href=\"");
 		cw(b);
 		cw("\">");
-		cw(pi->components->entries[i]);
+		cw(ri->file_path_parts->entries[i]);
 		cw("</a>");
 		
 		free(a);
 		a = b;
 		
-		if(i < pi->components->len - 1) {
+		if(i < ri->file_path_parts->len - 1) {
 			cw("/");
 		}
 	}
@@ -320,7 +214,7 @@ void do_file(path_info* pi, scgi_request* req, connection_t* con) {
 		cw("</a></td>\n");
 		
 		cw("<td><c>");
-		char* textsafe = htmlencode(text, -1);
+		char* textsafe = html_encode(text, -1);
 		cw(text);
 		free(textsafe);
 		cw("</c></td>\n");
@@ -340,8 +234,63 @@ void do_file(path_info* pi, scgi_request* req, connection_t* con) {
 }
 
 
+int is_valid_branch(request_info* ri) {
+	printf("is_valid_branch nyi\n");
+	
+	return 0 == strcmp(ri->branch, "master");
+}
 
 
+void extract_file_path(request_info* ri, strlist* tmp_uri_parts) {
+	ri->file_path_parts = strlist_new();
+	
+	// check that it's a valid path the whole way
+	for(int i = 0; i < tmp_uri_parts->len; i++) {
+		char* p = tmp_uri_parts->entries[i]; 
+		
+		char type = get_file_type(p);
+		if(type == 'd') {
+			printf("is dir\n");
+			ri->leaf_type = 'd';
+			strlist_push(ri->file_path_parts, strdup(p));
+		}
+		else if(type == 'f') {
+			printf("is file\n");
+			ri->leaf_type = 'f';
+			strlist_push(ri->file_path_parts, strdup(p));
+			break;
+		}
+		else {
+			// TODO: 404
+			ri->leaf_type = 0;
+			break;
+		}
+	
+	}
+		
+	ri->rel_file_path = join_str_list(ri->file_path_parts->entries, "/");
+	ri->abs_file_path = path_join(ri->abs_project_path, ri->rel_file_path);
+}
+
+
+void render_src_view(request_info* ri, scgi_request* req, connection_t* con) {
+	
+	
+	if(ri->leaf_type == 'd') {
+		do_folder(ri, req, con); 
+		return;
+	}
+	else if(ri->leaf_type == 'f') {
+		do_file(ri, req, con);
+		return;
+	}
+	else {
+		printf("bad leaf type handler nyi\n");
+		cw("Status: 404\r\n\r\n");
+		return;
+	}
+
+}
 
 
 void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
@@ -366,6 +315,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		return;
 	}
 	
+	// handle requests for static files
 	if(0 == strncmp(uri, "/_/", 3)) {
 		
 		if(strstr(uri, "..")) {
@@ -390,107 +340,180 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	}
 	
 	
+	request_info ri = {0};
 	
 	
-	char** uri_parts = str_split(uri, "/");
-	char** part = uri_parts;
+	ri.uri_parts = strlist_new();
 	
-	if(uri_parts[0] == NULL || (strlen(uri_parts[0]) == 0 && uri_parts[1] == NULL)) {
-		do_project_index(rm, req, con);
-		
-		free_strpp(uri_parts);
-		return;
-	}
-
-	strlist* final_path = strlist_new();
+	parse_uri(uri, ri.uri_parts);
 	
-	for(; *part; part++) {
-		char* a = join_str_list(final_path->entries, "/");
-		char* b = path_join(rm->path, a);
-		char* c = path_join(b, *part);
-		
-		printf("\n");
-		
-		char type = get_file_type(c);
-		if(type == 'd') {
-			printf("is dir\n");
-			strlist_push(final_path, *part);
-		}
-		else if(type == 'f') {
-			printf("is file\n");
-			strlist_push(final_path, *part);
-			break;
-		}
-		
-		printf("part '%s'\n", *part);
-		printf("a: '%s'\n", a);
-		printf("b: '%s'\n", b);
-		printf("c: '%s'\n", c);
-			
-		free(a);
-		free(b);
-		free(c);
-	}
+	strlist* tmp_uri_parts = strlist_clone(ri.uri_parts);
 	
+	// URL formats:
+	/*
 	
-	char* relpath = join_str_list(final_path->entries, "/");
-	char* path = path_join(rm->path, relpath);
+	http://domain.tld/                        -- site homepage
+	http://domain.tld/_/                      -- static assets
+	http://domain.tld/[username]              -- user profile 
+	http://domain.tld/u/[username]/           -- user meta
+	http://domain.tld/[username]/[repo]/      -- repo homepage
+	http://domain.tld/[username]/[repo]/src   -- branch list
+	http://domain.tld/[username]/[repo]/src/[branch]                     -- root directory listing of the branch/commit
+	http://domain.tld/[username]/[repo]/src/[branch]/[/path/to/file.c]   -- source view of file
+	http://domain.tld/[username]/[repo]/status  -- repo meta
+	http://domain.tld/[username]/[repo]/settings  -- repo meta
 	
 	
 	
-	printf("orig path: '%s'\n", path);
+	*/
 	
-	if(strstr(uri, "..")) {
-		printf("'..' found in request uri\n");
+	
+	// check for homepage
+	if(tmp_uri_parts->len == 0) {
 		cw("Status: 404\r\n\r\n");
+		printf("site homepage nyi\n");
 		return;
 	}
 	
-	
-	char type = get_file_type(path);
-	
-	
-	char* base = strlen(uri_parts[0]) == 0 ? uri_parts[1] : uri_parts[0];
-	
-	path_info pi = {
-		.components = final_path,
-		.fullpath = path,
-		.repo_path = path_join(rm->path, base),
-		.rel_path = strchrnul(relpath + 1, '/'),
-	};
-	
-	if(type == 'd') {
-		do_folder(&pi, req, con); 
-		return;
+	// check for /u/
+	if(0 == strcmp(tmp_uri_parts->entries[0], "u")) {
+		free(strlist_shift(tmp_uri_parts));
+		
+		// extract username
+		ri.username = strlist_shift(tmp_uri_parts);
+		ri.abs_user_path = path_join(rm->path, "users", ri.username);
+		
+		// validate username
+		if(!is_dir(ri.abs_user_path)) {
+			printf("user '%s' not found\n", ri.username);
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		
+		// check for user profile homepage
+		if(tmp_uri_parts->len == 0) {
+			printf("user profile homepage nyi\n");
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		// extract and validate project name
+		ri.project = strlist_shift(tmp_uri_parts);
+		ri.abs_project_path = path_join(ri.abs_user_path, "repos", ri.project);
+		
+		if(!is_dir(ri.abs_project_path)) {
+			printf("project '%s'/'%s' not found\n", ri.username, ri.project);
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		// check for project homepage
+		if(tmp_uri_parts->len == 0) {
+			printf("project homepage nyi\n");
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		// extract category (src, wiki, issues, etc.)
+		ri.category = strlist_shift(tmp_uri_parts);
+		if(0 == strcmp(ri.category, "src")) {
+			
+			// check for branch list page
+			if(tmp_uri_parts->len == 0) {
+				printf("branch list nyi\n");
+				cw("Status: 404\r\n\r\n");
+				return;
+			}
+			
+			// extract and validate branch
+			ri.branch = strlist_shift(tmp_uri_parts);
+			
+			if(!is_valid_branch(&ri)) {
+				printf("invalid branch handler nyi (%s/%s/%s)\n", ri.username, ri.project, ri.branch);
+				cw("Status: 404\r\n\r\n");
+				return;
+			}
+		
+			// extract file path
+			extract_file_path(&ri, tmp_uri_parts);
+			
+			render_src_view(&ri, req, con);
+			return;
+		}
+		else {
+			printf("category '%s' nyi\n", ri.category);
+			cw("Status: 404\r\n\r\n");
+			return;
+		}
+		
+		
+		
 	}
-	else if(type == 'f') {
-		do_file(&pi, req, con);
-		return;
+	
+	printf("non-/u/ urls nyi\n");
+	cw("Status: 404\r\n\r\n");
+	return;
+	
+	
+	// extract project (repo) name
+	if(1 || rm->enable_projects) {
+		
+		ri.project = strlist_shift(tmp_uri_parts);
+	
+		
+		if(ri.project == NULL || (strlen(ri.project) == 0)) {
+			do_project_index(rm, req, con);
+			
+			// TODO proper cleanup
+			strlist_free(ri.uri_parts, 1);
+			return;
+		}
+	}
+		
+	// extract the category
+	if(0 == strcmp(rm->source_uri_part, tmp_uri_parts->entries[0])) {
+		ri.request_type = RT_SourceView;
+		free(strlist_shift(tmp_uri_parts));
+	}
+	else if(0 == strcmp(rm->pulls_uri_part, tmp_uri_parts->entries[0])) {
+		ri.request_type = RT_PullRequests;
+		free(strlist_shift(tmp_uri_parts));
 	}
 	else {
-		cw("Status: 404\r\n\r\n");
-		return;
+		ri.request_type = RT_ProjectPage;
 	}
 	
-	free(relpath);
-	free(pi.repo_path);
-	free_strpp(uri_parts);
-	strlist_free(final_path, 1);
-/*
 	
-	for(char** s = files; *s; s++) {
+	// extract the branch, if its something that needs in
+	if(ri.request_type == RT_SourceView) {
+		ri.branch = strlist_shift(tmp_uri_parts);
 		
-		for(int i = 0; (*s)[i]; i++) {
-			if(isalnum((*s)[i])) printf("%c", (*s)[i]);
-			else printf(" %d ", (int)(*s)[i]);
-		}
-		printf("\n");
-		cw(*s, strlen(*s), 0);
-		cw("\r\n", strlen("\r\n"), 0);
+		if(!ri.branch || strlen(ri.branch) == 0) {
+			printf("ERR: no branch found\n");
 			
+			do_project_index(rm, req, con);
+			
+			// TODO proper cleanup
+			strlist_free(ri.uri_parts, 1);
+			return;
+			
+		}
 	}
-	printf("\n");
-	*/
+	
+	
+
+
+//
+//	
+//	if(strstr(uri, "..")) {
+//		printf("'..' found in request uri\n");
+//		cw("Status: 404\r\n\r\n");
+//		return;
+//	}
+//	
+	
+
 	
 			
 }

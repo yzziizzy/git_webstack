@@ -13,138 +13,8 @@
 #include "strlist.h"
 
 
-
-
-char* tests[] = {
-	"",
-	"..",
-	"/",
-	"/../..",
-	"/./",
-	"///",
-	"/sti",
-	"///sti",
-	"/sti/",
-	"/sti//",
-	"/sti/sti.h",
-	"/s%20ti/.sti.h",
-	"/sti/..sti.h",
-	"/sti/../sti.h",
-	"/sti/two/sti.h",
-	"/sti/two//sti.h",
-	"/%73ti///two//sti.h",
-	"/sti/%2f/two//sti.h",
-	"/sti/%2e/two//sti.h",
-	"/sti//./two////sti.h",
-	NULL,
-};
-
-
-// modifies the string in-place
-void compress_slashes(char* raw) {
-	char* w, *r;
-	
-	if(!raw[0]) return;
-	
-	for(r = raw + 1, w = raw + 1; *r; r++) {
-		if(*r == '/' && *(r + 1) == '/') r++;
-		
-		*w = *r;
-		w++;
-	}
-	
-	*w = 0;
-}
-
-// modifies the string in-place
-void compress_single_dot_dirs(char* raw) {
-	char* w, *r;
-	
-	if(!raw[0]) return;
-	
-	for(r = raw, w = raw; *r; r++) {
-		if(*r == '/' && *(r+1) == '.' && *(r+2) == '/') r += 2;
-		
-		*w = *r;
-		w++;
-	}
-	
-	*w = 0;
-}
-
-
-int hexdigit(char c) {
-	if(c >= '0' && c <= '9') return c - '0';
-	if(c >= 'a' && c <= 'f') return c - 'a' + 10;
-	if(c >= 'A' && c <= 'F') return c - 'A' + 10;
-	return 0;
-}
-
-// modifies the string in-place
-void uri_decode(char* raw) {
-	char* w, *r;
-	
-	if(!raw[0]) return;
-	
-	for(r = raw, w = raw; *r; r++) {
-		if(*r == '%' && isxdigit(*(r+1)) && isxdigit(*(r+2))) {
-			int c = hexdigit(*(r+1)) * 16 + hexdigit(*(r+1));
-			*w = c;
-			r += 2;
-		}	
-		else {
-			*w = *r;
-			w++;
-		}
-	}
-	
-	*w = 0;
-}
-
-
-
-void parse_uri(char* raw, strlist* out) {
-	
-	if(raw[0] == 0) {
-		// home
-		return;
-	}
-	
-	uri_decode(raw);
-	compress_slashes(raw);
-	compress_single_dot_dirs(raw);
-	
-	
-	char has_slash = 0;
-	char has_period = 0;
-	
-	char* start = raw; 
-	char* s;
-	for(s = raw; *s; s++) {
-		char c = *s;
-		
-		if(c == '/') {
-			char* end = s;
-			int len = end - start;
-			
-			if(len > 0) {
-				char* part = strndup(start, len);
-				strlist_push(out, part);
-			}
-			
-			start = s + 1;
-		}
-	}
-	
-	char* end = s;
-	int len = end - start;
-			
-	if(len > 0) {
-		char* part = strndup(start, len);
-		strlist_push(out, part);
-	}
-	
-}
+void initialize_path_for_system(char* path, char clobber);
+void initialize_user(char* syspath, char* username, char* email, char clobber);
 
 
 
@@ -154,27 +24,93 @@ int main(int argc, char* argv[]) {
 	a.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &a, NULL);
 
-	for(char** t = tests; *t; t++) {
-		printf("\nbefore: '%s', ", *t);
-		char* s = strdup(*t);
-		strlist* list = strlist_new();
-		parse_uri(s, list);
-		printf("after: '%s'\n", s);
-		for(int i = 0; i < list->len; i++) {
-			printf("  '%s'\n", list->entries[i]);
-		}
-		
-	} 
-	return 0;
-
 	if(argc < 2) {
 		printf("usage: %s <path_to_repos>\n", argv[0]);
 		exit(1);
 	}
+	
+	char* path_to_init = NULL;
+	char* email_to_init = NULL;
+	char* username_to_init = NULL;
+	char* repos_path = NULL;
+	
+	for(int ai = 1; ai < argc; ai++) {
+		char c = argv[ai][0];
+		
+		if(c == '-') {
+		
+			// long args
+			if(argv[ai][1] == '-') {
+				char* cmd = argv[ai] + 2;
+				
+				if(0 == strcmp(cmd, "init")) {
+					// next arg is the target path
+					path_to_init = argv[++ai];
+					if(path_to_init == NULL) {
+						fprintf(stderr, "Usage: %s --init <path_to_initialize>\n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "add-user")) {
+					// next arg is the target path
+					if(argc >= ai + 2) {
+						username_to_init = argv[++ai];
+						email_to_init = argv[++ai];
+					}
+					if(!username_to_init || !email_to_init) {
+						fprintf(stderr, "Usage: %s --add-user <username> <email>\n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "repos")) {
+					// next arg is the target path
+					repos_path = argv[++ai];
+					if(path_to_init == NULL) {
+						fprintf(stderr, "Usage: %s --repos <directory_containing_git_repositories>\n", argv[0]);
+						exit(1);
+					}
+				}
+				else {
+					fprintf(stderr, "Unknown argument: --%s\n", cmd);
+					exit(1);
+				}
+			
+			}
+			else { // short args
+				for(int i = 1; argv[ai][i]; i++) {
+					switch(argv[ai][i]) {
+					
+					
+						default:
+							fprintf(stderr, "Unknown argument: -%c\n", argv[ai][i]);
+							exit(1);
+					}
+				}
+			}
+		}
+		else {
+			repos_path = argv[ai];
+		}
+	
+	}
+	
+	if(path_to_init) {
+		initialize_path_for_system(path_to_init, 0);
+		return 0;
+	}
+	else if(username_to_init) {
+		initialize_user(repos_path, username_to_init, email_to_init, 0);
+	}
+	
+	
 
 	repo_meta* rm = calloc(1, sizeof(*rm));
 	rm->path = argv[1];//"/home/izzy/projects"; // because the executable is running from the project's repo
 	rm->static_asset_path = "./webstatic";
+	rm->source_uri_part = "src";
+	rm->pulls_uri_part = "pulls";
+	rm->wiki_uri_part = "wiki";
+	rm->issues_uri_part = "issues";
 	
 	scgi_server* srv = scgi_create(4999, rm, git_browse_handler);
 	srv->handler = git_browse_handler;

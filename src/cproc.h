@@ -1,6 +1,7 @@
 #ifndef __GWS__cproc_h__
 #define __GWS__cproc_h__
 
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/prctl.h>
 #include <pty.h>

@@ -30,6 +30,18 @@ void strlist_push(strlist* sl, char* e) {
 	sl->entries[sl->len] = 0;
 }
 
+// remove and return the first entry
+char* strlist_shift(strlist* sl) {
+	if(sl->len == 0) return NULL;
+	
+	char* ret = sl->entries[0];
+	
+	sl->len--;
+	memmove(sl->entries, sl->entries + 1, sl->len * sizeof(*sl->entries));
+	
+	return ret;
+}
+
 
 void strlist_free(strlist* sl, char freeSelf) {
 	for(int i = 0; i < sl->len; i++) {
@@ -37,6 +49,23 @@ void strlist_free(strlist* sl, char freeSelf) {
 	}
 	
 	if(freeSelf) free(sl);
+}
+
+
+// full deep clone
+strlist* strlist_clone(strlist* old) {
+	strlist* new = malloc(sizeof(*new));
+	new->alloc = old->alloc;
+	new->len = old->len;
+	new->entries = malloc(new->alloc * sizeof(*new->entries));
+	
+	for(int i = 0; i < new->len; i++) {
+		new->entries[i] = strdup(old->entries[i]);
+	}
+	
+	new->entries[new->len] = NULL;
+	
+	return new;
 }
 
 
