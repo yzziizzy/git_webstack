@@ -15,224 +15,6 @@
 
 
 
-void do_project_index(repo_meta* rm, scgi_request* req, connection_t* con) {
-	char* resp = "Status: 200 OK\r\nContent-Type: text/html\r\n\r\n";
-		
-	cw(resp);
-	html_header(con);
-	
-	cw("<table class=\"dirlisting\">");
-	char* cmd = sprintfdup("find %s/ -maxdepth 1 -type d", rm->path);
-	char* str = sysstring(cmd);
-	free(cmd);
-	
-	char** dirs = str_split(str, "\r\n");
-	free(str);
-	
-	for(char** s = dirs; *s; s++) {
-		
-		char* w = strrchr(*s, '/');
-		if(strlen(w) == 1) continue;
-		
-		
-		cw("<tr>");
-		
-		cw("<td><a href=\"");
-		cw(w);
-		cw("\">");
-		cw(w);
-		cw("</a></td>");
-		
-		cw("</tr>");
-	}
-	cw("</table>");
-	
-	html_footer(con);
-	
-}
-
-void do_folder(request_info* ri, scgi_request* req, connection_t* con) {
-
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/ ls-tree --name-only HEAD ./%s/", ri->abs_project_path, ri->abs_project_path, ri->branch, ri->rel_file_path);
-	char* str = sysstring(cmd);
-	printf("gitlscmd: '%s'\n", str);
-	free(cmd);
-	
-//	printf("'%s'\n", str);
-	char** files = str_split(str, "\r\n");
-	
-	char* cmd_fmt = "git --work-tree=%s --git-dir=%s/.git/  --no-pager log -1 --pretty=format:%%H%%n%%cn%%n%%ce%%n%%ci%%n%%cr%%n%%s%%n -- %s";
-	
-	
-	
-	char* resp = "Status: 200 OK\r\nContent-Type: text/html\r\n\r\n";
-		
-	cw(resp);
-	html_header(con);
-	
-	cw("<table class=\"dirlisting\">");
-	
-	char* a = strdup("");
-	
-	cw("<tr><th colspan=4>/");
-	for(int i = 0; i < ri->file_path_parts->len; i++) {
-		if(strlen(ri->file_path_parts->entries[i]) == 0) continue;
-		char* b = path_join(a, ri->file_path_parts->entries[i]);
-		cw("<a href=\"");
-		cw(b);
-		cw("\">");
-		cw(ri->file_path_parts->entries[i]);
-		cw("</a>");
-		
-		free(a);
-		a = b;
-		
-		if(i < ri->file_path_parts->len - 1) {
-			cw("/");
-		}
-	}
-	cw("</th></tr>");
-	
-	free(a);
-	
-	for(char** s = files; *s; s++) {
-		char* cmd = sprintfdup(cmd_fmt, ri->abs_project_path, ri->abs_project_path, *s);
-		char* res = sysstring(cmd);
-		printf("cmd: %s\n", cmd);
-		free(cmd);
-		
-		char** data = str_split(res, "\r\n");
-		cw("<tr>");
-		
-		cw("<td><a href=\"/");
-		cw(ri->file_path_parts->entries[1]); cw("/"); cw(*s);
-		cw("\">");
-		
-		char* w = strrchr(*s, '/');
-		cw(w ? w + 1 : *s);
-		cw("</a></td>");
-		
-			cw("<td>");
-			cw(data[5]);
-			cw("</td>");
-			
-			cw("<td>");
-			cw(data[4]);
-			cw("</td>");
-		
-		cw("</tr>");
-		
-		free(res);
-		free_strpp(data);
-	}
-	cw("</table>");
-	
-	html_footer(con);
-
-	free(str);
-	free_strpp(files);
-
-}
-
-void do_file(request_info* ri, scgi_request* req, connection_t* con) {
-
-
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/  --no-pager blame -lc %s", ri->abs_project_path, ri->abs_project_path, ri->rel_file_path);
-	char* str = sysstring(cmd);
-	free(cmd);
-	
-//	printf("'%s'\n", str);
-	char** files = str_split(str, "\r\n");
-
-	char* resp = "Status: 200 OK\r\nContent-Type: text/html\r\n\r\n";
-	
-	cw(resp);
-	html_header(con);
-	
-	cw("<table class=\"codelisting lang-c\">");
-	
-	char* a = strdup("");
-	
-	cw("<tr><th colspan=4>/");
-	for(int i = 0; i < ri->file_path_parts->len; i++) {
-		if(strlen(ri->file_path_parts->entries[i]) == 0) continue;
-		char* b = path_join(a, ri->file_path_parts->entries[i]);
-		cw("<a href=\"");
-		cw(b);
-		cw("\">");
-		cw(ri->file_path_parts->entries[i]);
-		cw("</a>");
-		
-		free(a);
-		a = b;
-		
-		if(i < ri->file_path_parts->len - 1) {
-			cw("/");
-		}
-	}
-	cw("</th></tr>");
-	
-	free(a);
-	
-	for(char** s = files; *s; s++) {
-
-		char* hash_end = strchr(*s, '\t');
-		char* hash = *s;
-		
-		char* user = hash_end + strspn(hash_end, "(\t ");
-		char* user_end = strchr(user, '\t');
-		
-		char* timestamp = strpbrk(user_end, "\t") + 1;
-		char* timestamp_end = strchr(timestamp, '\t');
-		
-		char* line = strpbrk(timestamp_end, "\t") + 1;
-		char* line_end = strchr(line, ')');
-		
-		char* text = line_end + 1;
-		
-		cw("<tr hash=\"");
-		cnw(hash, hash_end - hash);
-		cw("\" user=\"");
-		cnw(user, user_end - user);
-		cw("\" timestamp=\"");
-		cnw(timestamp, timestamp_end - timestamp);
-		cw("\" line=\"");
-		cnw(line, line_end - line);
-		cw("\">\n");
-		
-		
-		cw("<td>");
-		cnw(user, user_end - user);
-		cw("</td>\n");
-		
-		cw("<td id=\"L");
-		cnw(line, line_end - line);
-		cw("\"><a href=\"#L");
-		cnw(line, line_end - line);
-		cw("\">");
-		cnw(line, line_end - line);
-		cw("</a></td>\n");
-		
-		cw("<td><c>");
-		char* textsafe = html_encode(text, -1);
-		cw(text);
-		free(textsafe);
-		cw("</c></td>\n");
-		
-		
-		cw("</tr>\n");
-		
-	}
-	cw("</table>");
-	
-	
-	html_footer(con);
-
-	free(str);
-	free_strpp(files);
-
-}
-
 
 int is_valid_branch(request_info* ri) {
 	printf("is_valid_branch nyi\n");
@@ -244,11 +26,16 @@ int is_valid_branch(request_info* ri) {
 void extract_file_path(request_info* ri, strlist* tmp_uri_parts) {
 	ri->file_path_parts = strlist_new();
 	
+	ri->leaf_type = 'd'; // project root dir by default
+	
+	char* base = strdup(ri->abs_src_path);
 	// check that it's a valid path the whole way
 	for(int i = 0; i < tmp_uri_parts->len; i++) {
 		char* p = tmp_uri_parts->entries[i]; 
+		char* path = path_join(base, p);
 		
-		char type = get_file_type(p);
+		printf("checking path '%s'\n", path);
+		char type = get_file_type(path);
 		if(type == 'd') {
 			printf("is dir\n");
 			ri->leaf_type = 'd';
@@ -266,31 +53,17 @@ void extract_file_path(request_info* ri, strlist* tmp_uri_parts) {
 			break;
 		}
 	
+		free(base);
+		base = path;
 	}
-		
+	
+	free(base);
+	
 	ri->rel_file_path = join_str_list(ri->file_path_parts->entries, "/");
 	ri->abs_file_path = path_join(ri->abs_project_path, ri->rel_file_path);
 }
 
 
-void render_src_view(request_info* ri, scgi_request* req, connection_t* con) {
-	
-	
-	if(ri->leaf_type == 'd') {
-		do_folder(ri, req, con); 
-		return;
-	}
-	else if(ri->leaf_type == 'f') {
-		do_file(ri, req, con);
-		return;
-	}
-	else {
-		printf("bad leaf type handler nyi\n");
-		cw("Status: 404\r\n\r\n");
-		return;
-	}
-
-}
 
 
 void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
@@ -370,8 +143,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	
 	// check for homepage
 	if(tmp_uri_parts->len == 0) {
-		cw("Status: 404\r\n\r\n");
-		printf("site homepage nyi\n");
+		do_site_homepage(rm, req, con);
 		return;
 	}
 	
@@ -393,14 +165,15 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		
 		// check for user profile homepage
 		if(tmp_uri_parts->len == 0) {
-			printf("user profile homepage nyi\n");
-			cw("Status: 404\r\n\r\n");
+//			printf("user profile homepage nyi\n");
+			do_project_index(&ri, req, con);
 			return;
 		}
 		
 		// extract and validate project name
 		ri.project = strlist_shift(tmp_uri_parts);
 		ri.abs_project_path = path_join(ri.abs_user_path, "repos", ri.project);
+		ri.abs_src_path = path_join(ri.abs_project_path, "src");
 		
 		if(!is_dir(ri.abs_project_path)) {
 			printf("project '%s'/'%s' not found\n", ri.username, ri.project);
@@ -408,10 +181,18 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			return;
 		}
 		
+		ri.gr.repo_name = strdup(ri.project);
+		ri.gr.owner = strdup(ri.username);
+		ri.gr.abs_base_path = strdup(ri.abs_project_path);
+		ri.gr.abs_src_path = strdup(ri.abs_src_path);
+		ri.gr.abs_meta_path = path_join(ri.abs_project_path, "meta");
+		ri.gr.abs_wiki_path = path_join(ri.abs_project_path, "wiki");
+		ri.gr.abs_pulls_path = path_join(ri.abs_project_path, "pulls");
+		ri.gr.abs_issues_path = path_join(ri.abs_project_path, "issues");
+		
 		// check for project homepage
 		if(tmp_uri_parts->len == 0) {
-			printf("project homepage nyi\n");
-			cw("Status: 404\r\n\r\n");
+			do_project_homepage(&ri, req, con);
 			return;
 		}
 		
@@ -422,7 +203,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			// check for branch list page
 			if(tmp_uri_parts->len == 0) {
 				printf("branch list nyi\n");
-				cw("Status: 404\r\n\r\n");
+				http302(con, "/u/", ri.username, "/", ri.project, "/src/master");
 				return;
 			}
 			
@@ -438,7 +219,19 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			// extract file path
 			extract_file_path(&ri, tmp_uri_parts);
 			
-			render_src_view(&ri, req, con);
+			ri.gp.branch = strdup(ri.branch);
+			if(ri.file_path_parts->len) {
+				ri.gp.filename = strdup(ri.file_path_parts->entries[ri.file_path_parts->len - 1]);
+			}
+			else {
+				ri.gp.filename = strdup("");
+			}
+			ri.gp.type = ri.leaf_type;
+			ri.gp.file_path_parts = strlist_clone(ri.file_path_parts);
+			ri.gp.abs_file_path = strdup(ri.abs_file_path);
+			ri.gp.rel_file_path = strdup(ri.rel_file_path);
+			
+			do_src_view(&ri, req, con);
 			return;
 		}
 		else {
@@ -456,53 +249,6 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	return;
 	
 	
-	// extract project (repo) name
-	if(1 || rm->enable_projects) {
-		
-		ri.project = strlist_shift(tmp_uri_parts);
-	
-		
-		if(ri.project == NULL || (strlen(ri.project) == 0)) {
-			do_project_index(rm, req, con);
-			
-			// TODO proper cleanup
-			strlist_free(ri.uri_parts, 1);
-			return;
-		}
-	}
-		
-	// extract the category
-	if(0 == strcmp(rm->source_uri_part, tmp_uri_parts->entries[0])) {
-		ri.request_type = RT_SourceView;
-		free(strlist_shift(tmp_uri_parts));
-	}
-	else if(0 == strcmp(rm->pulls_uri_part, tmp_uri_parts->entries[0])) {
-		ri.request_type = RT_PullRequests;
-		free(strlist_shift(tmp_uri_parts));
-	}
-	else {
-		ri.request_type = RT_ProjectPage;
-	}
-	
-	
-	// extract the branch, if its something that needs in
-	if(ri.request_type == RT_SourceView) {
-		ri.branch = strlist_shift(tmp_uri_parts);
-		
-		if(!ri.branch || strlen(ri.branch) == 0) {
-			printf("ERR: no branch found\n");
-			
-			do_project_index(rm, req, con);
-			
-			// TODO proper cleanup
-			strlist_free(ri.uri_parts, 1);
-			return;
-			
-		}
-	}
-	
-	
-
 
 //
 //	

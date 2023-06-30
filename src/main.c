@@ -100,6 +100,7 @@ int main(int argc, char* argv[]) {
 	}
 	else if(username_to_init) {
 		initialize_user(repos_path, username_to_init, email_to_init, 0);
+		return 0;
 	}
 	
 	

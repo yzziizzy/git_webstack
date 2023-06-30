@@ -1,10 +1,21 @@
 #include <string.h>
+#include <stdarg.h>
 
 
 #include "html.h"
 
 
 
+void cw_(connection_t* con, int nargs, ...) {
+	va_list va;
+	va_start(va, nargs);
+	
+	for(int i = 0; i < nargs; i++) {
+		connection_write(con, va_arg(va, char*), -1);
+	}
+	
+	va_end(va);
+}
 
 
 
@@ -15,6 +26,24 @@ void html_header(connection_t* con) {
 void html_footer(connection_t* con) {
 	cw("\n</body>\n</html>\n");
 }
+
+
+
+void http302_(connection_t* con, int nargs, ...) {
+	cw("Status: 302\r\nLocation: ");
+	
+	va_list va;
+	va_start(va, nargs);
+
+	for(size_t i = 0; i < nargs; i++) {
+		cw(va_arg(va, char*));
+	}
+
+	va_end(va);
+	
+	cw("\r\n\r\n");
+}
+
 
 
 char* html_encode(char* src, ssize_t len) {

@@ -1,9 +1,12 @@
 
 #include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <sys/stat.h>
 
 #include "sys.h"
+#include "sti/sti.h"
 
 
 char get_file_type(char* path) {
@@ -31,6 +34,27 @@ int file_doesnt_exist(char* path) {
 }
 
 
+char* systemf(char* fmt, ...) {
+	va_list va;
+	
+	va_start(va, fmt);
+	size_t n = vsnprintf(NULL, 0, fmt, va);
+	char* buf = malloc(n + 1);
+	va_end(va);
+	
+	va_start(va, fmt);
+	vsnprintf(buf, n + 1, fmt, va);
+	va_end(va);
+
+	printf("system: %s\n", buf);
+	char* str = sysstring(buf);
+	
+	free(buf);
+	
+	return str;
+}
+
+
 char* sysstring(char* cmdline) {
 	struct child_process_info* cpi = exec_cmdline_pipe(cmdline);
 
@@ -55,7 +79,12 @@ char* sysstring(char* cmdline) {
 	}
 	
 	char* out = cpi->output_buffer;
-
+	
+	if(cpi->exit_status != 0) {
+		free(out);
+		return NULL;
+	}
+	
 	free_cpi(cpi, 0);
 	
 	return out;
@@ -118,6 +147,15 @@ int file_append_line(char* path, char* line) {
 	return 0;
 }
 
+
+
+// should be a clean path; no extra slashes
+char* get_file(char* path) {
+	
+	// TODO: caching
+	
+	return read_whole_file(path, NULL);
+}
 
 
 

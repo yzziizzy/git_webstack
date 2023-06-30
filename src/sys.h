@@ -13,11 +13,15 @@ int is_file(char* path);
 int file_doesnt_exist(char* path);
 
 
+char* systemf(char* fmt, ...);
 char* sysstring(char* cmdline);
 
 int file_append_line(char* path, char* line);
 int file_write_string(FILE* f, char* s, long n);
 
+
+// should be a clean path; no extra slashes
+char* get_file(char* path);
 
 
 #endif // __GWS__sys_h__

@@ -5,6 +5,10 @@
 #include "scgi.h"
 #include "strlist.h"
 #include "git.h"
+#include "uri.h"
+#include "sys.h"
+#include "html.h"
+
 
 
 typedef struct {
@@ -66,8 +70,12 @@ typedef struct request_info {
 	strlist* file_path_parts;
 	char* abs_user_path;
 	char* abs_project_path;
+	char* abs_src_path;
 	char* abs_file_path;
 	char* rel_file_path;
+
+	git_repo gr;
+	git_path gp;
 
 	path_info* pi;
 	repo_meta* rm;
@@ -80,6 +88,13 @@ typedef struct request_info {
 void git_browse_handler(void* user_data, scgi_request* req, connection_t* con);
 
 
+void do_project_index(request_info* ri, scgi_request* req, connection_t* con);
+void do_folder(request_info* ri, scgi_request* req, connection_t* con);
+void do_file(request_info* ri, scgi_request* req, connection_t* con);
+void do_src_view(request_info* ri, scgi_request* req, connection_t* con);
+void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* con);
+void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con);
 
+void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con);
 
 #endif // __GWS__git_browse_h__
