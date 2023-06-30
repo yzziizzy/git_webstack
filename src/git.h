@@ -35,6 +35,9 @@ typedef struct {
 
 void free_git_repo(git_repo* gr);
 
+int git_repo_init_short(git_repo* gr, char* repos_path, char* target_repo);
+
+
 char* git_count_commits(git_repo* gr, char* branch);
 long git_count_commits_int(git_repo* gr, char* branch);
 

@@ -23,5 +23,6 @@ int file_write_string(FILE* f, char* s, long n);
 // should be a clean path; no extra slashes
 char* get_file(char* path);
 
+char* extract_line(char* src, char* key);
 
 #endif // __GWS__sys_h__

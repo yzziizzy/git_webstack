@@ -21,6 +21,23 @@ void free_git_repo(git_repo* gr) {
 }
 
 
+int git_repo_init_short(git_repo* gr, char* repos_path, char* target_repo) {
+	char* slash = strchr(target_repo, '/');
+	if(!slash) return 1;
+	
+	gr->owner = strndup(target_repo, slash -  target_repo);
+	gr->repo_name = strdup(slash + 1);
+	
+	gr->abs_base_path = path_join(repos_path, "users", gr->owner, "repos", gr->repo_name);
+	gr->abs_src_path = path_join(gr->abs_base_path, "src");
+	gr->abs_meta_path = path_join(gr->abs_base_path, "meta");
+	gr->abs_pulls_path = path_join(gr->abs_base_path, "pulls");
+	gr->abs_wiki_path = path_join(gr->abs_base_path, "wiki");
+	gr->abs_issues_path = path_join(gr->abs_base_path, "issues");
+	
+	return 0;
+}
+
 
 char* git_count_commits(git_repo* gr, char* branch) {
 	//	git rev-list --count <branch-name>

@@ -159,4 +159,41 @@ char* get_file(char* path) {
 
 
 
+char* extract_line(char* src, char* key) {
+	
+	char* line = src;
+	
+	do {
+		int i = 0;
+		for(;; i++) {
+			if(key[i] == 0) {
+				if(line[i] == ':') goto FOUND;
+				goto FAIL;
+			}
+			
+			if(key[i] != line[i]) goto FAIL;
+			if(line[i] == 0) goto FAIL;
+		}
+		
+	FOUND:
+		char* end = strchrnul(line + i, '\n');
+		return strndup(line + i + 1, end - (line + i + 1));
+		
+	FAIL:
+		line = strchr(line + 1, '\n');
+		if(!line) break;
+		line++;
+	} while(1);
+	
+	return NULL;
+}
+
+
+
+
+
+
+
+
+
 
