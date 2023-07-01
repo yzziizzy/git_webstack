@@ -19,6 +19,7 @@ char* sysstring(char* cmdline);
 int file_append_line(char* path, char* line);
 int file_write_string(FILE* f, char* s, long n);
 
+strlist* list_directories(char* path);
 
 // should be a clean path; no extra slashes
 char* get_file(char* path);

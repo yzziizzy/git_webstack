@@ -33,10 +33,26 @@ typedef struct {
 } git_path;
 
 
+typedef struct {
+	char* creator;
+	char* repo_owner;
+	char* repo_name;
+	int user_issue_num;
+	char open;
+	
+	char* folder_name;
+	
+	char* abs_path;
+} git_issue;
+
+
+
 void free_git_repo(git_repo* gr);
+void free_git_issue(git_issue* gi);
+
 
 int git_repo_init_short(git_repo* gr, char* repos_path, char* target_repo);
-
+int git_issue_init_short(git_issue* gi, char* repos_path, char* target_issue);
 
 char* git_count_commits(git_repo* gr, char* branch);
 long git_count_commits_int(git_repo* gr, char* branch);

@@ -191,6 +191,11 @@ char* extract_line(char* src, char* key) {
 
 
 
+strlist* list_directories(char* path) {
+	printf("list_directories nyi\n");
+	exit(2);
+	return NULL;
+}
 
 
 

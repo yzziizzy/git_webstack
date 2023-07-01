@@ -90,7 +90,6 @@ int create_issue(git_repo* gr, char* issue_username, char* issue_file_path) {
 	char* abs_issue_file = sprintfdup("%s/%ld_%s", abs_issue_path, unixt, issue_username);
 	f = fopen(abs_issue_file, "wb");
 	if(!f) {
-		printf("%s\n", strerror(errno));
 		fprintf(stderr, "Error: could not create issue comment file '%s'\n", abs_issue_file);
 		goto FAIL;
 	}
@@ -120,12 +119,57 @@ FAIL:
 	memtricks_shitty_arena_exit();
 	
 	return ret;
-	
 }
 	
 
+int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path) {
+	int ret = 1;
+	FILE* f = 0;
+	
+	
+	memtricks_set_shitty_arena();
+	
+	char* file_contents = get_file(comment_file_path);
 
+	
+	time_t unixt = time(NULL);
+	struct tm* tm = gmtime(&unixt);
+	
 
+	char* msg = strstr(file_contents, "\n\n");
+	if(!msg) {
+		fprintf(stderr, "Error: No message in issue file '%s'.\n", comment_file_path);
+		goto FAIL;
+	}
+	msg += 2; // skip the linebreaks
+	
+	char* abs_issue_file = sprintfdup("%s/%ld_%s", gi->abs_path, unixt, comment_username);
+	f = fopen(abs_issue_file, "wb");
+	if(!f) {
+		fprintf(stderr, "Error: could not create issue comment file '%s'\n", abs_issue_file);
+		goto FAIL;
+	}
+
+	// TODO: Re:
+	
+	char* header = sprintfdup("Date: %d-%.2d-%.2d %.2d:%.2d\nTimestamp: %ld\nAuthor: %s\nRepo User: %s\nRepo Name: %s\n\n%s", 
+		tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, unixt, comment_username, gi->repo_owner, gi->repo_name, msg);
+	
+	if(file_write_string(f, header, -1)) {
+		fprintf(stderr, "Error: could not write to issue comment file");
+		goto FAIL;
+	}
+	
+	ret = 0;
+	
+FAIL:
+	if(f) fclose(f);
+
+	memtricks_shitty_arena_exit();
+	
+	return ret;
+}
+	
 
 
 

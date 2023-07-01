@@ -16,7 +16,7 @@
 void initialize_path_for_system(char* path, char clobber);
 void initialize_user(char* syspath, char* username, char* email, char clobber);
 int create_issue(git_repo* gr, char* issue_username, char* issue_file_path);
-
+int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path);
 
 int main(int argc, char* argv[]) {
 	memtricks_init();
@@ -35,9 +35,14 @@ int main(int argc, char* argv[]) {
 	char* email_to_init = NULL;
 	char* username_to_init = NULL;
 	char* repos_path = NULL;
+	
 	char* issue_username = NULL;
 	char* issue_file_path = NULL;
 	char* target_repo = NULL;
+	
+	char* comment_username = NULL;
+	char* target_issue = NULL;
+	char* comment_file_path = NULL;
 	
 	
 	for(int ai = 1; ai < argc; ai++) {
@@ -68,7 +73,7 @@ int main(int argc, char* argv[]) {
 						exit(1);
 					}
 				}
-				else if(0 == strcmp(cmd, "add-issue")) {
+				else if(0 == strcmp(cmd, "new-issue")) {
 					// next arg is the target path
 					if(argc >= ai + 3) {
 						issue_username = argv[++ai];
@@ -77,6 +82,18 @@ int main(int argc, char* argv[]) {
 					}
 					if(!issue_file_path || !issue_username || !target_repo) {
 						fprintf(stderr, "Usage: %s --new-issue <posting_user> <repo_username>/<repo> <issue_file> \n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "add-comment")) {
+					// next arg is the target path
+					if(argc >= ai + 3) {
+						comment_username = argv[++ai];
+						target_issue = argv[++ai];
+						comment_file_path = argv[++ai];
+					}
+					if(!comment_username || !target_issue || !comment_file_path) {
+						fprintf(stderr, "Usage: %s --add-comment <posting_user> <repo_username>/<repo>/<issue> <comment_file> \n", argv[0]);
 						exit(1);
 					}
 				}
@@ -130,6 +147,18 @@ int main(int argc, char* argv[]) {
 		create_issue(&gr, issue_username, issue_file_path);
 		
 		free_git_repo(&gr);
+		return 0;
+	}
+	else if(comment_username) {
+		git_issue gi = {0};
+		if(git_issue_init_short(&gi, repos_path, target_issue)) {
+			fprintf(stderr, "No such issue '%s'\n", target_issue);
+			return 1;
+		}
+	
+		issue_add_comment(&gi, comment_username, comment_file_path);
+		
+		free_git_issue(&gi);
 		return 0;
 	}
 	
