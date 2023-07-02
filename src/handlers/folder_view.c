@@ -39,6 +39,7 @@ void do_folder(request_info* ri, scgi_request* req, connection_t* con) {
 		
 	cw(resp);
 	html_header(con);
+	html_repo_header(con, &ri->gr);
 	
 	render_folder(&ri->gr, &ri->gp, req, con);
 	

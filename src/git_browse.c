@@ -234,6 +234,28 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			do_src_view(&ri, req, con);
 			return;
 		}
+		else if(0 == strcmp(ri.category, "issues")) {
+		
+			// check for issue list page
+			if(tmp_uri_parts->len == 0) {
+				do_project_issues(&ri, req, con);
+				return;
+			}
+			
+			ri.gi.creator = strlist_shift(tmp_uri_parts);
+			
+			if(tmp_uri_parts->len == 0) {
+				printf("issue-by-creator list nyi\n");
+				cw("Status: 404\r\n\r\n");
+				return;
+			}
+			
+			ri.gi.user_issue_num_str = strlist_shift(tmp_uri_parts);
+			ri.gi.user_issue_num = strtol(ri.gi.user_issue_num_str, NULL, 10);
+			
+			do_issue(&ri, &ri.gi, req, con);
+			return;
+		}
 		else {
 			printf("category '%s' nyi\n", ri.category);
 			cw("Status: 404\r\n\r\n");

@@ -4,10 +4,13 @@
 
 #include "net.h"
 #include "sti/sti.h"
+#include "git.h"
 
 
 void html_header(connection_t* con);
 void html_footer(connection_t* con);
+
+void html_repo_header(connection_t* con, git_repo* gr);
 
 char* html_encode(char* src, ssize_t len);
 char* c_ws_escape(char* raw);

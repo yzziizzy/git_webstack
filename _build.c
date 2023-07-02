@@ -18,6 +18,8 @@ char* sources[] = {
 	"git_browse.c",
 	"handlers/file_view.c",
 	"handlers/folder_view.c",
+	"handlers/issue_view.c",
+	"handlers/issues.c",
 	"handlers/project_homepage.c",
 	"handlers/site_homepage.c",
 	"handlers/user_homepage.c",

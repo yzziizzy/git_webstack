@@ -31,14 +31,66 @@ p {
 }
 
 a {
-	color: #ccccdd;
-	text-decoration: underline;
+	color: #bada55;
+	text-decoration: none;
 	font-weight: bold;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+
+.project-title {
+	font-size: 1.2em;
+	margin-bottom: 10px;
+}
+
+.meta-links {
+	margin-bottom: 10px;
+	background-color: #333
+}
+
+.meta-links td {
+	padding: 8px;
+}
+
+.dirlisting {
+	margin-bottom: 30px;
+}
+
+.dirlisting tr {
+	border-bottom: 1px solid silver;
+}
+
+.dirlisting td {
+	padding: 2px 10px;
+}
+
+.dirlisting td:nth-child(1) {
+	padding-right: 30px;
 }
 
 pre {
 	margin: 0;
 	padding: 0;
+}
+
+.fileview, .fileview tr {
+	border-collapse: collapse;
+	border: 1px solid silver;
+}
+
+.fileview th {
+	background-color: #333;
+	color: #fff;
+	font-weight: bold;
+	padding: 4px;
+}
+
+.fileview td {
+	padding: 8px;
+	min-width: 300px;
 }
 
 c, c span {

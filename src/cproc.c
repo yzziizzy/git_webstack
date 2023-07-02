@@ -107,13 +107,143 @@ int execute_mt(strlist* cmds, int threads, struct child_process_info*** cpis) {
 
 
 
+static int count_args(char* str) {
+	int n = 0;
+	char inspace = 1;
+	char inquote = 0;
+	char last_was_slash = 0;
+	
+	for(char* s = str; *s; s++) {
+		if(*s == ' ') {
+			if(!last_was_slash && !inquote) {
+				if(!inspace) {
+					inspace = 1;
+				}
+			}
+			
+			last_was_slash = 0;
+		}
+		else {
+			if(inspace) {
+				n++;
+				inspace = 0;
+			}
+			
+			if(*s == '\\') {
+				if(!last_was_slash) last_was_slash = 1;
+			}
+			else {
+				
+				if(*s == '"') {
+					if(!last_was_slash) {
+						inquote = !inquote;
+					}
+				}
+				
+				last_was_slash = 0;
+			}
+		}
+	}
+	
+	return n;
+}
+
+static char** split_args(char* cmdline, int* nargs_out) {
+	int nargs = count_args(cmdline);
+	
+	char** args = malloc((nargs + 1) * sizeof(char*));
+	
+	int n = 0;
+	char inspace = 1;
+	char inquote = 0;
+	char last_was_slash = 0;
+	char* start = NULL;
+	
+	char* s;
+	char* end = NULL;
+	for(s = cmdline; *s; s++) {
+		if(*s == ' ') {
+			if(!last_was_slash && !inquote) {
+				if(!inspace) {
+					inspace = 1;
+					end = s;
+				}
+			}
+			
+			last_was_slash = 0;
+		}
+		else {
+			if(inspace) {
+				if(start) {
+					args[n++] = strndup(start, end - start);
+				}
+				start = s;
+				inspace = 0;
+			}
+			
+			if(*s == '\\') {
+				if(!last_was_slash) last_was_slash = 1;
+			}
+			else {
+				
+				if(*s == '"') {
+					if(!last_was_slash) {
+						inquote = !inquote;
+					}
+				}
+				
+				last_was_slash = 0;
+			}
+			
+			end = s;
+		}
+	}
+	
+	if(start != s && end != start) {
+		args[n++] = strndup(start, end - start + (*end != ' '));
+	}
+	
+	args[nargs] = NULL;
+	if(nargs_out) *nargs_out = nargs;
+	
+	return args;
+}
+
+
 struct child_process_info* exec_cmdline_pipe(char* cmdline) {
-	// kinda janky. it doesn't handle quotes
-	char** args = str_split(cmdline, " ");
+	
+	
+	char* test[] = {
+		"   a  ",
+		"   a b ",
+		"   aaa bb ",
+		"   aaa bb",
+		"   a b c ",
+		"   a\\ \\ b c ",
+		"\\   a b c ",
+		"\"   a b\" c ",
+		"\"   a\\ b\" c ",
+		"\"   a\\ b\"\\ c ",
+		"\"   a\\ b\"\\ c",
+		NULL,
+	};
+	
+	for(char** x = test; *x; x++) {
+		printf("[%s] = %d\n", *x, count_args(*x));
+		char** a = split_args(*x, NULL);
+		for(int i = 0; a[i]; i++) {
+			printf(" %d = [%s]\n", i, a[i]);
+		}
+	}
+	
+	
+	
+	
+	char** args = split_args(cmdline, NULL);
 
 	struct child_process_info* cpi = exec_process_pipe(args[0], args);
 //	printf("executing '%s'\n", cmdline);
-//	for(char** s = args; *s; s++) printf("%d - '%s'\n", (s-args), *s);
+//	for(char** s = args; *s; s++) printf("%ld - '%s'\n", (s-args), *s);
 	free_strpp(args);
 	
 	return cpi;
@@ -192,9 +322,9 @@ struct child_process_info* exec_process_pipe(char* exec_path, char* args[]) {
 		
 		// set to non-blocking
 		fcntl(master, F_SETFL, fcntl(master, F_GETFL) | FNDELAY | O_NONBLOCK);
-		
+
 		close(slave);
-		
+
 // 		tcsetattr(STDIN_FILENO, TCSANOW, &master);
 // 		fcntl(master, F_SETFL, FNDELAY);
 		

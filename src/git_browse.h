@@ -76,6 +76,7 @@ typedef struct request_info {
 
 	git_repo gr;
 	git_path gp;
+	git_issue gi;
 
 	path_info* pi;
 	repo_meta* rm;
@@ -96,5 +97,7 @@ void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* 
 void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con);
 
 void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con);
+void do_project_issues(request_info* ri, scgi_request* req, connection_t* con);
+void do_issue(request_info* ri, git_issue* gi, scgi_request* req, connection_t* con);
 
 #endif // __GWS__git_browse_h__

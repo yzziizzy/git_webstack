@@ -15,20 +15,28 @@ void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con)
 	cw(resp);
 	html_header(con);
 	
-	cw("<a href=\"/u/", ri->username, "\">", ri->username, "</a>");
-	cw("/<a href=\"/u/", ri->username, "/", ri->project, "\">", ri->project, "</a>");
+	html_repo_header(con, &ri->gr);
 	
+	cw("<table class=\"meta-links\"><tr>");
 	char* commits = git_count_commits(&ri->gr, "master"); 
-	cw("<br /><a href=\"/u/", ri->username, "/", ri->project, "/commits\">", commits, " commits</a><br />");
+	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/commits\">", commits, " commits</a></td>");
 	free(commits);
 	
 	char* branches = git_count_branches(&ri->gr); 
-	cw("<a href=\"/u/", ri->username, "/", ri->project, "/branches\">", branches, " branch");
+	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/branches\">", branches, " branch");
 	if(!(branches[0] == '1' && branches[1] == 0)) cw("es");
-	cw("</a><br />");
-	
+	cw("</a></td>");
 	free(branches);
-		
+	
+	char issues[30];
+	long issue_cnt = git_count_open_issues(&ri->gr); 
+	snprintf(issues, 30, "%ld", issue_cnt);
+	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/issues\">", issues, " issue");
+	if(issue_cnt != 1) cw("s");
+	cw("</a></td>");
+	
+	cw("</tr></table>");
+	
 	git_path gp;
 	gp.type = 'd';
 	gp.branch = "master";
@@ -45,7 +53,7 @@ void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con)
 	char* readme = git_get_file(&ri->gr, "master", "README.md");
 	if(readme) {
 		char* rm_safe = html_encode(readme, -1);
-		cw("<pre lang=md>", rm_safe, "</pre>");
+		cw("<table class=\"fileview\"><tr><th>", "README.md" ,"</th></tr><tr><td><pre lang=md>", rm_safe, "</pre></td></tr></table>");
 		free(rm_safe);
 		free(readme);
 	}

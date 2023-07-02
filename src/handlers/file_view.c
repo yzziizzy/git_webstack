@@ -26,6 +26,7 @@ void do_file(request_info* ri, scgi_request* req, connection_t* con) {
 	
 	cw(resp);
 	html_header(con);
+	html_repo_header(con, &ri->gr);
 	
 	cw("<table class=\"codelisting lang-c\">");
 	
