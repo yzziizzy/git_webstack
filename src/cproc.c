@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <ctype.h>
 
 
 #include "cproc.h"
@@ -106,102 +107,68 @@ int execute_mt(strlist* cmds, int threads, struct child_process_info*** cpis) {
 }
 
 
+char* span_arg(char* in) {
+	int quote = 0;
+	char* s;
+	
+	if(*in == '\'' || *in == '"') {
+		quote = *in;
+		
+		for(s = in + 1; *s; s++) {
+			if(*s == quote) {
+				if(*(s-1) == '\\') continue;
+				break;
+			}
+		}
+	
+		return s;
+	}
+	
+	for(s = in; *s; s++) {
+		if(isspace(*s)) {
+			if(*(s-1) == '\\') continue;
+			break;
+		}
+	}
+	
+	return s;
+}
+
+
+
 
 static int count_args(char* str) {
 	int n = 0;
-	char inspace = 1;
-	char inquote = 0;
-	char last_was_slash = 0;
 	
-	for(char* s = str; *s; s++) {
-		if(*s == ' ') {
-			if(!last_was_slash && !inquote) {
-				if(!inspace) {
-					inspace = 1;
-				}
-			}
-			
-			last_was_slash = 0;
-		}
-		else {
-			if(inspace) {
-				n++;
-				inspace = 0;
-			}
-			
-			if(*s == '\\') {
-				if(!last_was_slash) last_was_slash = 1;
-			}
-			else {
-				
-				if(*s == '"') {
-					if(!last_was_slash) {
-						inquote = !inquote;
-					}
-				}
-				
-				last_was_slash = 0;
-			}
-		}
-	}
+	do {
+		str += strspn(str, " \t\n\r");
+		
+		char* s = span_arg(str);
+		
+		if(str != s) n++;
+		
+		str = s;
+	} while(*str);
 	
 	return n;
 }
 
-static char** split_args(char* cmdline, int* nargs_out) {
-	int nargs = count_args(cmdline);
+static char** split_args(char* str, int* nargs_out) {
+	int nargs = count_args(str);
+	int n = 0;
 	
 	char** args = malloc((nargs + 1) * sizeof(char*));
 	
-	int n = 0;
-	char inspace = 1;
-	char inquote = 0;
-	char last_was_slash = 0;
-	char* start = NULL;
-	
-	char* s;
-	char* end = NULL;
-	for(s = cmdline; *s; s++) {
-		if(*s == ' ') {
-			if(!last_was_slash && !inquote) {
-				if(!inspace) {
-					inspace = 1;
-					end = s;
-				}
-			}
-			
-			last_was_slash = 0;
+	do {
+		str += strspn(str, " \t\n\r");
+		
+		char* s = span_arg(str);
+		if(str != s) {
+			args[n++] = strndup(str, s - str);
 		}
-		else {
-			if(inspace) {
-				if(start) {
-					args[n++] = strndup(start, end - start);
-				}
-				start = s;
-				inspace = 0;
-			}
-			
-			if(*s == '\\') {
-				if(!last_was_slash) last_was_slash = 1;
-			}
-			else {
-				
-				if(*s == '"') {
-					if(!last_was_slash) {
-						inquote = !inquote;
-					}
-				}
-				
-				last_was_slash = 0;
-			}
-			
-			end = s;
-		}
-	}
-	
-	if(start != s && end != start) {
-		args[n++] = strndup(start, end - start + (*end != ' '));
-	}
+		
+		str = s;
+	} while(*str);
 	
 	args[nargs] = NULL;
 	if(nargs_out) *nargs_out = nargs;
@@ -213,34 +180,36 @@ static char** split_args(char* cmdline, int* nargs_out) {
 struct child_process_info* exec_cmdline_pipe(char* cmdline) {
 	
 	
-	char* test[] = {
-		"   a  ",
-		"   a b ",
-		"   aaa bb ",
-		"   aaa bb",
-		"   a b c ",
-		"   a\\ \\ b c ",
-		"\\   a b c ",
-		"\"   a b\" c ",
-		"\"   a\\ b\" c ",
-		"\"   a\\ b\"\\ c ",
-		"\"   a\\ b\"\\ c",
-		NULL,
-	};
-	
-	for(char** x = test; *x; x++) {
-		printf("[%s] = %d\n", *x, count_args(*x));
-		char** a = split_args(*x, NULL);
-		for(int i = 0; a[i]; i++) {
-			printf(" %d = [%s]\n", i, a[i]);
-		}
-	}
-	
+//	char* test[] = {
+//		"   a  ",
+//		"   a b ",
+//		"   aaa bb ",
+//		"   aaa bb d",
+//		"   aaa bb",
+//		"   a b c ",
+//		"   a\\ \\ b c ",
+//		"\\   a b c ",
+//		"\"   a b\" c ",
+//		"\"   a\\ b\" c ",
+//		"\"   a\\ b\"\\ c ",
+//		"\"   a\\ b\"\\ c",
+//		NULL,
+//	};
+//	
+//	for(char** x = test; *x; x++) {
+//		printf("[%s] = %d\n", *x, count_args(*x));
+//		char** a = split_args(*x, NULL);
+//		for(int i = 0; a[i]; i++) {
+//			printf(" %d = [%s]\n", i, a[i]);
+//		}
+//	}
+//	
 	
 	
 	
 	char** args = split_args(cmdline, NULL);
-
+	
+//	for(char** s = args; *s; s++ ) printf("arg: '%s'\n", *s);
 	struct child_process_info* cpi = exec_process_pipe(args[0], args);
 //	printf("executing '%s'\n", cmdline);
 //	for(char** s = args; *s; s++) printf("%ld - '%s'\n", (s-args), *s);

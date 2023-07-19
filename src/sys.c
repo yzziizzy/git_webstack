@@ -46,7 +46,7 @@ char* systemf(char* fmt, ...) {
 	vsnprintf(buf, n + 1, fmt, va);
 	va_end(va);
 
-	printf("system: %s\n", buf);
+//	printf("system: %s\n", buf);
 	char* str = sysstring(buf);
 	
 	free(buf);
@@ -56,6 +56,7 @@ char* systemf(char* fmt, ...) {
 
 
 char* sysstring(char* cmdline) {
+//	printf("cmdline: %s\n", cmdline);
 	struct child_process_info* cpi = exec_cmdline_pipe(cmdline);
 
 	
@@ -81,6 +82,8 @@ char* sysstring(char* cmdline) {
 	char* out = cpi->output_buffer;
 	
 	if(cpi->exit_status != 0) {
+		printf("cmdline: %s\n", cmdline);
+		printf("Exit status: %d\n", cpi->exit_status);
 		free(out);
 		return NULL;
 	}

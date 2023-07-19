@@ -20,9 +20,10 @@ void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con) {
 	cw("<table class=\"dirlisting\">");
 	char* cmd = sprintfdup("find %s/users/ -maxdepth 1 -type d", rm->path);
 	char* str = sysstring(cmd);
-	free(cmd);
 	
 	char** dirs = str_split(str, "\r\n");
+	
+	free(cmd);
 	free(str);
 	
 	for(char** s = dirs; *s; s++) {

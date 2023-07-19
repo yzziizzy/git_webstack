@@ -15,8 +15,11 @@
 
 void initialize_path_for_system(char* path, char clobber);
 void initialize_user(char* syspath, char* username, char* email, char clobber);
+int initialize_repo(char* syspath, char* username, char* reponame);
 int create_issue(git_repo* gr, char* issue_username, char* issue_file_path);
 int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path);
+
+
 
 int main(int argc, char* argv[]) {
 	memtricks_init();
@@ -39,6 +42,8 @@ int main(int argc, char* argv[]) {
 	char* issue_username = NULL;
 	char* issue_file_path = NULL;
 	char* target_repo = NULL;
+	char* repo_to_create = NULL;
+	char* target_username = NULL;
 	
 	char* comment_username = NULL;
 	char* target_issue = NULL;
@@ -70,6 +75,17 @@ int main(int argc, char* argv[]) {
 					}
 					if(!username_to_init || !email_to_init) {
 						fprintf(stderr, "Usage: %s --add-user <username> <email>\n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "add-repo")) {
+					// next arg is the target path
+					if(argc >= ai + 2) {
+						target_username = argv[++ai];
+						repo_to_create = argv[++ai];
+					}
+					if(!repo_to_create || !target_username) {
+						fprintf(stderr, "Usage: %s --add-repo <username> <repo_name>\n", argv[0]);
 						exit(1);
 					}
 				}
@@ -137,6 +153,10 @@ int main(int argc, char* argv[]) {
 		initialize_user(repos_path, username_to_init, email_to_init, 0);
 		return 0;
 	}
+	else if(repo_to_create) {
+		initialize_repo(repos_path, target_username, repo_to_create);
+		return 0;
+	}
 	else if(issue_username) {
 		git_repo gr = {0};
 		if(git_repo_init_short(&gr, repos_path, target_repo)) {
@@ -163,9 +183,10 @@ int main(int argc, char* argv[]) {
 	}
 	
 	
+	
 
 	repo_meta* rm = calloc(1, sizeof(*rm));
-	rm->path = argv[1];//"/home/izzy/projects"; // because the executable is running from the project's repo
+	rm->path = strdup(argv[1]);//"/home/izzy/projects"; // because the executable is running from the project's repo
 	rm->static_asset_path = "./webstatic";
 	rm->source_uri_part = "src";
 	rm->pulls_uri_part = "pulls";
@@ -175,6 +196,11 @@ int main(int argc, char* argv[]) {
 	scgi_server* srv = scgi_create(4999, rm, git_browse_handler);
 	srv->handler = git_browse_handler;
 	srv->user_data = rm;
+	
+	printf("Starting server:\n");
+	printf("  port: 4999\n");
+	printf("  root: %s\n", rm->path);
+	printf("\n");
 
 	
 	while(1) {
