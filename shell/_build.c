@@ -15,6 +15,7 @@
 char* sources[] = {
 	"cproc.c",
 	"main.c",
+	"../src/sti/sti.c",
 	"strlist.c",
 	NULL,
 };

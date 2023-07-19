@@ -15,7 +15,7 @@
 void do_file(request_info* ri, scgi_request* req, connection_t* con) {
 	printf("rendering file\n");
 
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/  --no-pager blame -lc %s", ri->abs_src_path, ri->abs_src_path, ri->rel_file_path);
+	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/  --no-pager blame -lc master -- %s", ri->abs_src_path, ri->abs_src_path, ri->rel_file_path);
 	char* str = sysstring(cmd);
 	free(cmd);
 	

@@ -23,19 +23,19 @@ int is_valid_branch(request_info* ri) {
 }
 
 
-void extract_file_path(request_info* ri, strlist* tmp_uri_parts) {
+void extract_file_path(request_info* ri, git_repo* gr, char* branch, strlist* tmp_uri_parts) {
 	ri->file_path_parts = strlist_new();
 	
 	ri->leaf_type = 'd'; // project root dir by default
 	
-	char* base = strdup(ri->abs_src_path);
+	char* base = strdup("");
 	// check that it's a valid path the whole way
 	for(int i = 0; i < tmp_uri_parts->len; i++) {
 		char* p = tmp_uri_parts->entries[i]; 
 		char* path = path_join(base, p);
 		
 		printf("checking path '%s'\n", path);
-		char type = get_file_type(path);
+		char type = git_file_type(gr, branch, path);
 		if(type == 'd') {
 			printf("is dir\n");
 			ri->leaf_type = 'd';
@@ -173,7 +173,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		// extract and validate project name
 		ri.project = strlist_shift(tmp_uri_parts);
 		ri.abs_project_path = path_join(ri.abs_user_path, "repos", ri.project);
-		ri.abs_src_path = path_join(ri.abs_project_path, "src");
+		ri.abs_src_path = path_join(ri.abs_project_path, "src.git");
 		
 		if(!is_dir(ri.abs_project_path)) {
 			printf("project '%s'/'%s' not found\n", ri.username, ri.project);
@@ -217,7 +217,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			}
 		
 			// extract file path
-			extract_file_path(&ri, tmp_uri_parts);
+			extract_file_path(&ri, &ri.gr, ri.branch, tmp_uri_parts);
 			
 			ri.gp.branch = strdup(ri.branch);
 			if(ri.file_path_parts->len) {

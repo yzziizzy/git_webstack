@@ -37,7 +37,7 @@ int git_repo_init_short(git_repo* gr, char* repos_path, char* target_repo) {
 	gr->repo_name = strdup(slash + 1);
 	
 	gr->abs_base_path = path_join(repos_path, "users", gr->owner, "repos", gr->repo_name);
-	gr->abs_src_path = path_join(gr->abs_base_path, "src");
+	gr->abs_src_path = path_join(gr->abs_base_path, "src.git");
 	gr->abs_meta_path = path_join(gr->abs_base_path, "meta");
 	gr->abs_pulls_path = path_join(gr->abs_base_path, "pulls");
 	gr->abs_wiki_path = path_join(gr->abs_base_path, "wiki");
@@ -142,7 +142,13 @@ int git_issue_init_from_dir(git_issue* gi, git_repo* gr, char* parent_dir, char*
 }
 
 
-
+int git_file_type(git_repo* gr, char* branch, char* rel_path) {
+	char* s = systemf("git --git-dir=%s ls-tree %s ./%s", gr->abs_src_path, branch, rel_path);
+	if(!s || !*s) return 0;
+	if(*s == '0') return 'd';
+	if(*s == '1') return 'f';
+	return 0;
+}
 
 
 
@@ -166,7 +172,7 @@ int git_issue_init(git_issue* gi, git_repo* gr, char* creator, char* creator_iss
 
 char* git_count_commits(git_repo* gr, char* branch) {
 	//	git rev-list --count <branch-name>
-	return systemf("git --work-tree=%s --git-dir=%s/.git/ --no-pager rev-list --count %s",  gr->abs_src_path, gr->abs_src_path, branch);
+	return systemf("git --work-tree=%s --git-dir=%s/ --no-pager rev-list --count %s",  gr->abs_src_path, gr->abs_src_path, branch);
 }
 
 long git_count_commits_int(git_repo* gr, char* branch) {
@@ -198,7 +204,7 @@ long git_count_branches_int(git_repo* gr) {
 }
 
 char* git_get_local_branches(git_repo* gr) {
-	return systemf("git --work-tree=%s --git-dir=%s/.git/ --no-pager branch -l",  gr->abs_src_path, gr->abs_src_path);
+	return systemf("git --work-tree=%s --git-dir=%s/ --no-pager branch -l",  gr->abs_src_path, gr->abs_src_path);
 }
 
 
@@ -317,7 +323,7 @@ void git_issue_find_dir(git_repo* gr, git_issue* gi) {
 
 // just the raw text
 char* git_get_file(git_repo* gr, char* branch, char* path) {
-	return systemf("git --work-tree=%s --git-dir=%s/.git/ --no-pager show %s:%s",  gr->abs_src_path, gr->abs_src_path, branch, path);
+	return systemf("git --work-tree=%s --git-dir=%s/ --no-pager show %s:%s",  gr->abs_src_path, gr->abs_src_path, branch, path);
 }
 
 

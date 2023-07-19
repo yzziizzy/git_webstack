@@ -74,6 +74,8 @@ git_issue_list* git_open_issues(git_repo* gr);
 
 void git_issue_find_dir(git_repo* gr, git_issue* gi);
 
+int git_file_type(git_repo* gr, char* branch, char* rel_path);
+
 char* git_get_file(git_repo* gr, char* branch, char* path);
 
 #endif // __GWS__git_h__

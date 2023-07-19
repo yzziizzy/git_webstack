@@ -53,7 +53,7 @@ void do_folder(request_info* ri, scgi_request* req, connection_t* con) {
 
 void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* con) {
 
-	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/.git/ ls-tree --name-only %s ./%s/", 
+	char* cmd = sprintfdup("git --work-tree=%s --git-dir=%s/ ls-tree --name-only %s ./%s/", 
 		gr->abs_src_path, gr->abs_src_path, gp->branch, gp->rel_file_path);
 	char* str = sysstring(cmd);
 	printf("gitlscmd: '%s'\n", cmd);
@@ -62,7 +62,7 @@ void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* 
 //	printf("'%s'\n", str);
 	char** files = str_split(str, "\r\n");
 	
-	char* cmd_fmt = "git --work-tree=%s --git-dir=%s/.git/  --no-pager log -1 --pretty=format:%%H%%n%%cn%%n%%ce%%n%%ci%%n%%cr%%n%%s%%n -- %s";
+	char* cmd_fmt = "git --work-tree=%s --git-dir=%s/  --no-pager log -1 --pretty=format:%%H%%n%%cn%%n%%ce%%n%%ci%%n%%cr%%n%%s%%n -- %s";
 
 	cw("<table class=\"dirlisting\">");
 	
