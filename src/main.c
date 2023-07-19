@@ -20,8 +20,20 @@ int create_issue(git_repo* gr, char* issue_username, char* issue_file_path);
 int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path);
 
 
+static volatile sig_atomic_t g_shutdown = 0; 
+
+void sigINT(int sig) {
+	g_shutdown = 1;
+}
+
 
 int main(int argc, char* argv[]) {
+	
+	
+    struct sigaction act;
+    act.sa_handler = sigINT;
+    sigaction(SIGINT, &act, NULL);
+	
 	memtricks_init();
 
 	struct sigaction a;
@@ -186,7 +198,7 @@ int main(int argc, char* argv[]) {
 	
 
 	repo_meta* rm = calloc(1, sizeof(*rm));
-	rm->path = strdup(argv[1]);//"/home/izzy/projects"; // because the executable is running from the project's repo
+	rm->path = strdup(repos_path);//"/home/izzy/projects"; // because the executable is running from the project's repo
 	rm->static_asset_path = "./webstatic";
 	rm->source_uri_part = "src";
 	rm->pulls_uri_part = "pulls";
@@ -203,15 +215,25 @@ int main(int argc, char* argv[]) {
 	printf("\n");
 
 	
-	while(1) {
+	while(!g_shutdown) {
 		
 		server_tick(srv->srv, 100);
-		
 //		sleep(1);
 	}
-
+	
+	printf("Shutting down...\n");
 
 	close(srv->srv->epollfd);
+	VEC_EACH(&srv->srv->cons, i, con) {
+	
+	}
+	VEC_FREE(&srv->srv->cons);
+	free(srv->srv);
+	free(srv);
+	free(rm->path);
+	free(rm);
+	
+	
 
 	return 0;
 }

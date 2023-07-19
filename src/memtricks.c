@@ -131,7 +131,7 @@ void memtricks_shitty_arena_free_all() {
 
 void memtricks_shitty_arena_exit() {
 	memtricks_shitty_arena_free_all();
-	default_free(NULL, g_shitty_arena_alloc_info.data);
+	
 	memtricks_set_defaults();
 }
 

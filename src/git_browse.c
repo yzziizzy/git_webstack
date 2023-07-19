@@ -71,6 +71,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 
 	printf("path: '%s'\n", rm->path);
 	
+	memtricks_set_shitty_arena();
 	
 	char* uri = NULL;
 	VEC_EACHP(&req->headers, i, h) {
@@ -85,7 +86,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	if(0 == strcmp(uri, "/favicon.ico")) {
 		char* resp = "Status: 404\r\n\r\n";
 		cw(resp);
-		return;
+		goto CLEANUP;
 	}
 	
 	// handle requests for static files
@@ -94,7 +95,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		if(strstr(uri, "..")) {
 			printf("'..' found in static asset path request\n");
 			cw("Status: 404\r\n\r\n");
-			return;
+			goto CLEANUP;
 		}
 		
 		char* testpath = path_join(rm->static_asset_path, uri + 3);
@@ -104,12 +105,12 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		if(!src) {
 			printf("no such static asset '%s'\n", uri);
 			cw("Status: 404\r\n\r\n");
-			return;
+			goto CLEANUP;
 		}
 		
 		cw("Status: 200\r\n\r\n");
 		cnw(src, slen - 1);
-		return;
+		goto CLEANUP;
 	}
 	
 	
@@ -144,7 +145,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	// check for homepage
 	if(tmp_uri_parts->len == 0) {
 		do_site_homepage(rm, req, con);
-		return;
+		goto CLEANUP;
 	}
 	
 	// check for /u/
@@ -159,7 +160,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		if(!is_dir(ri.abs_user_path)) {
 			printf("user '%s' not found\n", ri.username);
 			cw("Status: 404\r\n\r\n");
-			return;
+			goto CLEANUP;
 		}
 		
 		
@@ -167,7 +168,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		if(tmp_uri_parts->len == 0) {
 //			printf("user profile homepage nyi\n");
 			do_project_index(&ri, req, con);
-			return;
+			goto CLEANUP;
 		}
 		
 		// extract and validate project name
@@ -178,7 +179,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		if(!is_dir(ri.abs_project_path)) {
 			printf("project '%s'/'%s' not found\n", ri.username, ri.project);
 			cw("Status: 404\r\n\r\n");
-			return;
+			goto CLEANUP;
 		}
 		
 		ri.gr.repo_name = strdup(ri.project);
@@ -193,7 +194,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 		// check for project homepage
 		if(tmp_uri_parts->len == 0) {
 			do_project_homepage(&ri, req, con);
-			return;
+			goto CLEANUP;
 		}
 		
 		// extract category (src, wiki, issues, etc.)
@@ -204,7 +205,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			if(tmp_uri_parts->len == 0) {
 				printf("branch list nyi\n");
 				http302(con, "/u/", ri.username, "/", ri.project, "/src/master");
-				return;
+				goto CLEANUP;
 			}
 			
 			// extract and validate branch
@@ -213,7 +214,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			if(!is_valid_branch(&ri)) {
 				printf("invalid branch handler nyi (%s/%s/%s)\n", ri.username, ri.project, ri.branch);
 				cw("Status: 404\r\n\r\n");
-				return;
+				goto CLEANUP;
 			}
 		
 			// extract file path
@@ -232,14 +233,14 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			ri.gp.rel_file_path = strdup(ri.rel_file_path);
 			
 			do_src_view(&ri, req, con);
-			return;
+			goto CLEANUP;
 		}
 		else if(0 == strcmp(ri.category, "issues")) {
 		
 			// check for issue list page
 			if(tmp_uri_parts->len == 0) {
 				do_project_issues(&ri, req, con);
-				return;
+				goto CLEANUP;
 			}
 			
 			ri.gi.creator = strlist_shift(tmp_uri_parts);
@@ -247,19 +248,19 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 			if(tmp_uri_parts->len == 0) {
 				printf("issue-by-creator list nyi\n");
 				cw("Status: 404\r\n\r\n");
-				return;
+				goto CLEANUP;
 			}
 			
 			ri.gi.user_issue_num_str = strlist_shift(tmp_uri_parts);
 			ri.gi.user_issue_num = strtol(ri.gi.user_issue_num_str, NULL, 10);
 			
 			do_issue(&ri, &ri.gi, req, con);
-			return;
+			goto CLEANUP;
 		}
 		else {
 			printf("category '%s' nyi\n", ri.category);
 			cw("Status: 404\r\n\r\n");
-			return;
+			goto CLEANUP;
 		}
 		
 		
@@ -268,7 +269,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	
 	printf("non-/u/ urls nyi\n");
 	cw("Status: 404\r\n\r\n");
-	return;
+	goto CLEANUP;
 	
 	
 
@@ -280,7 +281,8 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 //		return;
 //	}
 //	
-	
+CLEANUP:
+	memtricks_shitty_arena_exit();
 
 	
 			

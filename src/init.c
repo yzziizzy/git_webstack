@@ -14,7 +14,7 @@
 		+ [user]
 			+ repos
 				+ [repo]
-					+ src
+					+ src.git
 					+ meta
 					+ issues
 					+ pulls
@@ -157,23 +157,8 @@ void initialize_user(char* syspath, char* username, char* email, char clobber) {
 	free(meta_watching);
 }
 
-
-
-int initialize_repo(char* syspath, char* username, char* reponame) {
-	char type = get_file_type(syspath);
-	if(type != 'd') {
-		fprintf(stderr, "Init repo error: '%s' is not a gitviewer system root directory.\n", syspath);
-		exit(1);
-	}
-	
-	
-	char* user_repos = path_join(syspath, "users", username, "repos");
-		if(!is_dir(user_repos)) {
-		fprintf(stderr, "Init repo error: '%s' is not a valid username.\n", username);
-		exit(1);
-	}
-	
-	char* repo_dir = path_join(user_repos, reponame);
+int verify_repo_structure(char* syspath, char* username, char* reponame) {
+	char* repo_dir = path_join(syspath, "users", username, "repos", reponame);
 	make_check_dir(repo_dir, 0777);
 	
 	char* src_dir = path_join(repo_dir, "src.git");
@@ -191,7 +176,33 @@ int initialize_repo(char* syspath, char* username, char* reponame) {
 	char* issues_cl_dir = path_join(issues_dir, "closed");
 	make_check_dir(issues_cl_dir, 0777);
 	
-	systemf("git --git-dir=%s init --bare --shared=all", src_dir);
+	free(repo_dir);
+	free(src_dir);
+	free(pulls_dir);
+	free(issues_dir);
+	free(issues_cl_dir);
+	free(issues_op_dir);
+	
+	return 0;
+}
+
+int initialize_repo(char* syspath, char* username, char* reponame) {
+	char type = get_file_type(syspath);
+	if(type != 'd') {
+		fprintf(stderr, "Init repo error: '%s' is not a gitviewer system root directory.\n", syspath);
+		exit(1);
+	}
+	
+	
+	char* user_repos = path_join(syspath, "users", username, "repos");
+		if(!is_dir(user_repos)) {
+		fprintf(stderr, "Init repo error: '%s' is not a valid username.\n", username);
+		exit(1);
+	}
+	
+	verify_repo_structure(syspath, username, reponame);
+	
+	systemf("git --git-dir=%s init --bare --shared=all", syspath);
 	
 	return 0;
 }

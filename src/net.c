@@ -62,6 +62,8 @@ void server_tick(server_t* srv, int wait) {
 	int ret = epoll_wait(srv->epollfd, &ee, 1, wait); 
 	
 	if(ret == -1) {
+		if(errno == EINTR) return;
+		
 		fatal("epoll error\n");
 	}
 	

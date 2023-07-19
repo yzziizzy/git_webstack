@@ -2,7 +2,7 @@
 
 
 html, body {
-	background-color: #222222;
+	background-color: #131516;
 	color: #ccccdd;
 	font-size: 12pt;
 	font-family: Sans-Serif;
@@ -11,6 +11,7 @@ html, body {
 
 body {
 	margin-left: 50px;
+	padding-bottom: 50px;
 }
 
 table, tr, td {
@@ -78,7 +79,7 @@ pre {
 
 .fileview, .fileview tr {
 	border-collapse: collapse;
-	border: 1px solid silver;
+	border: 1px solid #888;
 }
 
 .fileview th {
@@ -104,7 +105,7 @@ c, c span {
 .codelisting tr td:nth-child(1) {
 	padding: 0px 10px;
 	background-color: #111;
-	color: #777;
+	color: #aaa;
 	
 	-webkit-user-select: none;  
 	-moz-user-select: none;
@@ -112,11 +113,23 @@ c, c span {
 	user-select: none;
 }
 
+.codelisting th {
+	padding: 6px;
+	border-bottom: 1px solid #888;
+}
+
+.codelisting tr:nth-child(2) td {
+	padding-top: 4px;
+}
+.codelisting tr:last-child td {
+	padding-bottom: 4px !important;
+}
+
 /* line numbers */
 .codelisting tr td:nth-child(2) {
 	padding: 0px 0px;
-	border-left: 1px solid #558;
-	background-color: #282828;
+	border-left: 1px solid #888;
+	background-color: #1f1f1f;
 	
 	-webkit-user-select: none;  
 	-moz-user-select: none;
@@ -128,21 +141,29 @@ c, c span {
 	text-decoration: none;
 	display: inline-block;
 	width: 100%;
+	color: #888;
 	text-align: right;
 	padding-right: 10px;
 	padding-left: 5px;
 	box-sizing: border-box;
 }
 
-
-
 /* code */
 .codelisting tr td:nth-child(3) {
-	padding-left: 4px;
+	padding-left: 6px;
 	
 }
 
-
+/* line hover */
+.codelisting tr:hover td:nth-child(1) {
+	color: #ccc;
+}
+.codelisting tr:hover td:nth-child(2) a {
+	color: #ccc;
+}
+.codelisting tr:hover td {
+	background-color: #666;
+}
 
 
 /* highlighting colors */
@@ -170,8 +191,8 @@ c, c span {
 
 /* decent default values */
 .js-code-highlight-root, .codelisting {
-	background-color: #3E3E3E;
-	border: 1px solid black;
+	background-color: #26292a;
+	border: 1px solid #888;
 	font-size: .9em;
 	tab-size: 4;
 	-moz-tab-size: 4;

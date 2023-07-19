@@ -129,6 +129,11 @@ static void on_data(connection_t* con) {
 				
 				connection_close(con);
 				free(req->buf);
+				VEC_EACHP(&req->headers, i, h) {
+					free(h->key);
+					free(h->value);
+				}
+				VEC_FREE(&req->headers);
 				free(req);
 				
 				return;

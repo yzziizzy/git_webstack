@@ -85,7 +85,6 @@ typedef struct request_info {
 
 
 
-
 void git_browse_handler(void* user_data, scgi_request* req, connection_t* con);
 
 
