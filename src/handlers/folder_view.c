@@ -72,7 +72,7 @@ void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* 
 	for(int i = 0; i < gp->file_path_parts->len; i++) {
 		if(strlen(gp->file_path_parts->entries[i]) == 0) continue;
 		char* b = path_join(a, gp->file_path_parts->entries[i]);
-		cw("<a href=\"/u/", gr->owner, "/", gr->repo_name, "/src/", gp->branch);
+		cw("<a href=\"/", gr->owner, "/", gr->repo_name, "/src/", gp->branch);
 		cw(b);
 		cw("\">");
 		cw(gp->file_path_parts->entries[i]);
@@ -98,7 +98,7 @@ void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* 
 		char** data = str_split(res, "\r\n");
 		cw("<tr>");
 		
-		cw("<td><a href=\"/u/");
+		cw("<td><a href=\"/");
 		cw(gr->owner); cw("/"); cw(gr->repo_name); cw("/src/"); cw(gp->branch); cw("/"); cw(*s); // BUG?
 		cw("\">");
 		

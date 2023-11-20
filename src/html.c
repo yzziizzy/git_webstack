@@ -29,8 +29,8 @@ void html_footer(connection_t* con) {
 
 
 void html_repo_header(connection_t* con, git_repo* gr) {
-	cw("<div class=\"project-title\"><a href=\"/u/", gr->owner, "\">", gr->owner, "</a>");
-	cw("/<a href=\"/u/", gr->owner, "/", gr->repo_name, "\">", gr->repo_name, "</a></div>");
+	cw("<div class=\"project-title\"><a href=\"/", gr->owner, "\">", gr->owner, "</a>");
+	cw("/<a href=\"/", gr->owner, "/", gr->repo_name, "\">", gr->repo_name, "</a></div>");
 }
 
 

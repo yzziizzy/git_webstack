@@ -78,4 +78,8 @@ int git_file_type(git_repo* gr, char* branch, char* rel_path);
 
 char* git_get_file(git_repo* gr, char* branch, char* path);
 
+int git_is_bare_repo(char* path);
+int git_init_bare(char* path);
+
+
 #endif // __GWS__git_h__

@@ -26,4 +26,8 @@ char* get_file(char* path);
 
 char* extract_line(char* src, char* key);
 
+
+// does not handle escaped slashes
+int mkdirp(char* path, mode_t mode);
+
 #endif // __GWS__sys_h__

@@ -107,7 +107,7 @@ static void on_data(connection_t* con) {
 						req->total_len = req->content_len + req->header_netstring_len;
 					}
 					
-					//printf("Header: %s = %s\n", header->key, header->value);
+//					printf("Header: %s = %s\n", header->key, header->value);
 				}
 				
 				req->state = REQST_RESPOND;

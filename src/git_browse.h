@@ -10,6 +10,22 @@
 #include "html.h"
 
 
+struct request_info;
+typedef void (*page_handler_fn)(struct request_info* ri, scgi_request* req, connection_t* con);
+
+struct uri_pair {
+	char* s;
+	page_handler_fn fn;
+};
+
+typedef struct URIPart {
+	VEC(struct URIPart*) kids;		
+
+	char* string;
+	page_handler_fn fn;
+} URIPart;
+
+
 
 typedef struct {
 	char* path;
@@ -25,7 +41,7 @@ typedef struct {
 	char* wiki_uri_part; 
 	char* issues_uri_part; 
 	
-	
+	URIPart* uri_tree;
 	
 } repo_meta;
 
@@ -64,6 +80,7 @@ typedef struct request_info {
 	char* project;
 	char* category; // src,meta,wiki,issues,pulls,etc
 	char* branch;
+	char* issue;
 	
 	char leaf_type; // f,d for file directory. Used with SourceView
 	
@@ -80,6 +97,7 @@ typedef struct request_info {
 
 	path_info* pi;
 	repo_meta* rm;
+	
 } request_info;
 
 
@@ -95,8 +113,15 @@ void do_src_view(request_info* ri, scgi_request* req, connection_t* con);
 void render_folder(git_repo* gr, git_path* gp, scgi_request* req, connection_t* con);
 void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con);
 
-void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con);
+void do_site_homepage(request_info* ri, scgi_request* req, connection_t* con);
 void do_project_issues(request_info* ri, scgi_request* req, connection_t* con);
 void do_issue(request_info* ri, git_issue* gi, scgi_request* req, connection_t* con);
+
+
+
+URIPart* init_uri_tree(struct uri_pair* pairs);
+void sort_uri_tree(URIPart* p);
+void print_uri_tree(URIPart* p, int indent);
+page_handler_fn match_uri(URIPart* p, request_info* ri, int partIndex);
 
 #endif // __GWS__git_browse_h__

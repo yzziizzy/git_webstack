@@ -37,7 +37,7 @@ void do_file(request_info* ri, scgi_request* req, connection_t* con) {
 	for(int i = 0; i < ri->file_path_parts->len; i++) {
 		if(strlen(ri->file_path_parts->entries[i]) == 0) continue;
 		char* b = path_join(a, ri->file_path_parts->entries[i]);
-		cw("<a href=\"/u/");
+		cw("<a href=\"/");
 		cw(ri->username); cw("/"); cw(ri->project); cw("/src/"); cw(ri->branch);
 		cw(b);
 		cw("\">");

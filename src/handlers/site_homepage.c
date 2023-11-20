@@ -9,8 +9,10 @@
 
 
 
-void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con) {
+void do_site_homepage(request_info* ri, scgi_request* req, connection_t* con) {
 	char* resp = "Status: 200 OK\r\nContent-Type: text/html\r\n\r\n";
+		
+	repo_meta* rm = ri->rm;
 		
 	cw(resp);
 	html_header(con);
@@ -36,7 +38,7 @@ void do_site_homepage(repo_meta* rm, scgi_request* req, connection_t* con) {
 		
 		cw("<tr>");
 		
-		cw("<td><a href=\"/u/");
+		cw("<td><a href=\"/");
 		cw(w);
 		cw("\">");
 		cw(w);

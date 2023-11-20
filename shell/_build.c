@@ -13,10 +13,12 @@
 
 
 char* sources[] = {
-	"cproc.c",
+	"../src/cproc.c",
+	"../src/git.c",
+	"../src/sys.c",
 	"main.c",
 	"../src/sti/sti.c",
-	"strlist.c",
+	"../src/strlist.c",
 	NULL,
 };
 

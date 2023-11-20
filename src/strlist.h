@@ -17,6 +17,7 @@ void strlist_push(strlist* sl, char* e);
 strlist* strlist_new();
 void strlist_init(strlist* sl);
 strlist* strlist_clone(strlist* old);
+strlist* strlist_clone_from(strlist* old, int offset);
 
 // remove and return the first entry
 char* strlist_shift(strlist* sl);

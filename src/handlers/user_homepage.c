@@ -32,7 +32,7 @@ void do_project_index(request_info* ri, scgi_request* req, connection_t* con) {
 		
 		cw("<tr>");
 		
-		cw("<td><a href=\"/u/");
+		cw("<td><a href=\"/");
 		cw(ri->username);
 		cw(w);
 		cw("\">");

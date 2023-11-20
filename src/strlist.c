@@ -69,6 +69,23 @@ strlist* strlist_clone(strlist* old) {
 }
 
 
+// full deep clone
+strlist* strlist_clone_from(strlist* old, int offset) {
+	strlist* new = malloc(sizeof(*new));
+	new->alloc = old->alloc;
+	new->len = old->len - offset;
+	new->entries = malloc(new->alloc * sizeof(*new->entries));
+	
+	for(int i = 0; i < new->len; i++) {
+		new->entries[i] = strdup(old->entries[i + offset]);
+	}
+	
+	new->entries[new->len] = NULL;
+	
+	return new;
+}
+
+
 
 
 // splits on whitespace

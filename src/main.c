@@ -9,16 +9,12 @@
 #include "net.h"
 #include "scgi.h"
 #include "git_browse.h"
+#include "init.h"
 
 #include "strlist.h"
 
 
-void initialize_path_for_system(char* path, char clobber);
-void initialize_user(char* syspath, char* username, char* email, char clobber);
-int initialize_repo(char* syspath, char* username, char* reponame);
-int create_issue(git_repo* gr, char* issue_username, char* issue_file_path);
-int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path);
-
+const int g_system_version = 1;
 
 static volatile sig_atomic_t g_shutdown = 0; 
 
@@ -45,6 +41,8 @@ int main(int argc, char* argv[]) {
 		printf("usage: %s <path_to_repos>\n", argv[0]);
 		exit(1);
 	}
+	
+	char do_verify = 0;
 	
 	char* path_to_init = NULL;
 	char* email_to_init = NULL;
@@ -78,6 +76,10 @@ int main(int argc, char* argv[]) {
 						fprintf(stderr, "Usage: %s --init <path_to_initialize>\n", argv[0]);
 						exit(1);
 					}
+				}
+				else if(0 == strcmp(cmd, "verify")) {
+					// next arg is the target path
+					do_verify = 1;
 				}
 				else if(0 == strcmp(cmd, "add-user")) {
 					// next arg is the target path
@@ -161,6 +163,10 @@ int main(int argc, char* argv[]) {
 		initialize_path_for_system(path_to_init, 0);
 		return 0;
 	}
+	else if(do_verify) {
+		verify_all_users(repos_path);
+		return 0;
+	}
 	else if(username_to_init) {
 		initialize_user(repos_path, username_to_init, email_to_init, 0);
 		return 0;
@@ -204,6 +210,42 @@ int main(int argc, char* argv[]) {
 	rm->pulls_uri_part = "pulls";
 	rm->wiki_uri_part = "wiki";
 	rm->issues_uri_part = "issues";
+	
+	
+	struct uri_pair paths[] = {
+		{"", do_site_homepage}, // static assets
+		{"_", NULL}, // static assets
+		{"%u", do_project_index}, // user profile
+		{"u/%u", NULL}, // user meta
+		{"u/%u/newrepo", NULL},// create repo
+		{"%u/%r", do_project_homepage}, // repo homepage
+		{"%u/%r/src", NULL}, // branch list
+		{"%u/%r/src/%b", NULL}, // root dir listing of branch/commit
+		{"%u/%r/src/%b/%f", do_src_view}, // source view of file
+		{"%u/%r/status", NULL}, // repo meta
+		{"%u/%r/issues", do_project_issues}, // repo meta
+		{"%u/%r/issues/%i", do_project_issues}, // repo meta
+		{"%u/%r/settings", NULL}, // repo meta
+		{NULL, NULL},
+	};
+	
+	rm->uri_tree = init_uri_tree(paths);
+	sort_uri_tree(rm->uri_tree);
+	print_uri_tree(rm->uri_tree, 0);
+
+	
+	
+	int version = get_system_version(repos_path);
+	if(version < g_system_version) {
+		printf("Filesystem out of date. Updating...\n");
+		verify_all_users(repos_path);
+		write_system_version(repos_path, g_system_version);
+		printf("  Done\n");
+	}
+	else {
+		printf("Verifying repos...\n");
+		verify_all_users(repos_path);
+	}
 	
 	scgi_server* srv = scgi_create(4999, rm, git_browse_handler);
 	srv->handler = git_browse_handler;

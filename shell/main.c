@@ -8,6 +8,7 @@
 #include "cproc.h"
 
 #include "../src/sti/sti.h"
+#include "../src/git.h"
 
 #define p(...) \
 do {\
@@ -30,15 +31,14 @@ int hexdigit(char c) {
 }
 
 
-int decode_line(char* buf) {
+int read_line_len(char* buf) {
 	int len = 0;
 	len += hexdigit(buf + 3) * 0x1; 
 	len += hexdigit(buf + 2) * 0x10; 
 	len += hexdigit(buf + 1) * 0x100; 
 	len += hexdigit(buf + 0) * 0x1000; 
 	
-	
-	return 0;
+	return len;
 }
 
 
@@ -119,9 +119,18 @@ int main(int argc, char* argv[]) {
 	
 	git@server:user/meta
 	git@server:user/repo.git
-	git@server:user/repo/[meta|issues|pulls|src.git]
+	git@server:user/repo/[meta|issues|pulls]
 	
 	*/
+	
+	
+	
+	char* syspath = getenv("GITVIEWER_BASE_DIR");
+	if(!syspath) {
+		p("no GitViewer base path in ENV\n");
+		exit(1);
+	}
+	
 	
 	char** parts = strsplit(raw, '/', NULL);
 		
@@ -134,32 +143,13 @@ int main(int argc, char* argv[]) {
 	
 	char* username = parts[0];
 	
-	// verify with SSH-provided value
-	char* ssh_username = getenv("GITVIEWER_SSH_USER");
-	if(!ssh_username) {
-		p("no username key provided by ssh\n");
-		exit(1);
-	}
-	
-	if(0 != strcmp(ssh_username, username)) {
-		p("provided username and ssh username do not match: %s != %s\n", username, ssh_username);
-		exit(1);
-	}
-	
-	
-	char* syspath = getenv("GITVIEWER_BASE_DIR");
-	if(!syspath) {
-		p("no GitViewer base path in ENV\n");
-		exit(1);
-	}
-	
 	
 	char* user_dir = path_join(syspath, "users", username);
 	if(!is_dir(user_dir)) {
 		p("user %s does not exist\n", username);
 		exit(1);
 	}
-		
+	
 	
 	// grab and verify the repo name
 	goodchars = strspn(parts[1], "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.");
@@ -170,6 +160,15 @@ int main(int argc, char* argv[]) {
 	
 	char* reponame = parts[1];
 	
+	
+	
+	
+
+	
+
+		
+	
+
 	if(parts[2] == NULL) {
 		char* ext = strrchr(reponame, '.');
 		if(ext && !strcmp(ext, ".git")) {
@@ -181,6 +180,47 @@ int main(int argc, char* argv[]) {
 				p("'%s' is not a valid git repo\n", git_path);
 				exit(1);
 			}
+			
+			
+			
+						
+			
+			// verify permissions with SSH-provided username
+			char* ssh_username = getenv("GITVIEWER_SSH_USER");
+			if(!ssh_username) {
+				p("no username key provided by ssh\n");
+				exit(1);
+			}
+			
+			if(mode == PUSH) {
+				if(0 != strcmp(ssh_username, username)) {
+				
+					git_repo gr = {
+						.abs_src_path = path_join(user_dir, "repos", reponame, "settings");
+					};
+					
+					char* pushers_src = git_get_file(&gr, "master", "pushers");
+					char** pushers = strsplit_inplace("\n", pushers_src, NULL);
+					
+					int allowed = 0;
+					for(int i = 0; pushers[i]; i++) {
+						if(!strcasecmp(ssh_username, pushers[i])) {
+							allowed = 1;
+							break;
+						}
+					}	
+					
+					if(!allowed) {
+						p("provided username and ssh username do not match: %s != %s\n", username, ssh_username);
+						exit(1);
+					}
+				}
+			
+			}
+			
+			
+			
+			
 			
 			
 		}
@@ -209,6 +249,8 @@ int main(int argc, char* argv[]) {
 				p("'%s' is not a valid git repo\n", git_path);
 				exit(1);
 			}
+			
+			
 		}
 		else {
 			p("operation '%s' not supported\n", raw);
@@ -248,7 +290,9 @@ int main(int argc, char* argv[]) {
 	p("running %s %s\n", args[0], args[1]);
 	struct child_process_info* cpi = exec_process_pipe(args[0], args);
 	
-	
+	char* line = malloc(1024);
+	int lineLen = 0;
+	int packline_len = 0;
 	
 	int limit = 1000;
 	while(1) {
@@ -263,15 +307,35 @@ int main(int argc, char* argv[]) {
 		do {
 			bw = read(cpi->child_stdout, buf, BUFSZ);
 			totalWritten += bw;
+			
+
+			
 //			p("read %d\n", bw)
 			if(bw > 0) {
+				memcpy(line + lineLen, buf, bw);
+				lineLen += bw;
+				line[lineLen] = 0;
+				
+				if(packline_len == 0) {
+					if(lineLen >= 4) {
+						packline_len = read_line_len(line);
+						p("packline len: %d: \n", packline_len);
+					}
+				}
+				if(packline_len && lineLen >= packline_len) {
+					p("packline (len: %d): \n", packline_len);
+					
+					memmove(line, line + packline_len, lineLen - packline_len);
+					lineLen -= packline_len;
+					line[lineLen] = 0;
+					packline_len = 0;
+				}
+			
+			
 				fwrite(buf, 1, bw, f);
 			
-				fprintf(f, "\n%d bytes read from the child pty\n", bw);
-				fflush(f);
-				
-				fprintf(f, "pre stdout write of %d bytes\n", bw);
-				fflush(f);
+				p("\n%d bytes read from the child pty\n", bw);
+				p("pre stdout write of %d bytes\n", bw);
 				
 				/*
 				for(int j = 0; j < bw; j++) {
@@ -294,8 +358,7 @@ int main(int argc, char* argv[]) {
 	//				break;
 	//			}
 				
-				fprintf(f, "(%d bytes written)\n", bw);
-				fflush(f);
+				p("(%d bytes written)\n", bw);
 	//			fsync(STDOUT_FILENO);
 //				fprintf(f, "flushing finished\n");
 //				fflush(f);
@@ -306,38 +369,32 @@ int main(int argc, char* argv[]) {
 			//		fflush(f);
 				}
 				else if(errno != EAGAIN && errno != EWOULDBLOCK) {
-					fprintf(f, "\npty read Verror: %s\n", strerror(errno));
-					fflush(f);
+					p("\npty read Verror: %s\n", strerror(errno));
 					exit(1);
 				}
 				//p("Zerror: %d - %s\n", errno, strerror(errno))
 				break;
 			}
 			else {
-				fprintf(f, "zero bytes \n");
-				fflush(f);
+				p("zero bytes \n");
 			
 			}
 			
 		} while(bw != 0);
 		
 		if(totalWritten > 0) {
-			fprintf(f, "flushing \n");
-					fflush(f);
+			p("flushing \n");
 			fflush(stdout);		
-			fprintf(f, "flushing finished\n");
-					fflush(f);
+			p("flushing finished\n");
 		}
 		
 		int br = read(STDIN_FILENO, buf, BUFSZ);
 	
 		if(br > 0) {
 			fwrite(buf, 1, br, f);
-			fprintf(f, "\n%d bytes read from shell stdin\n",br);
-			fflush(f);
+			p("\n%d bytes read from shell stdin\n",br);
 		
-			fprintf(f, "pre pty write\n");
-			fflush(f);
+			p("pre pty write\n");
 			
 			int brr = 0;
 			while(brr < br) {
@@ -345,16 +402,14 @@ int main(int argc, char* argv[]) {
 			}
 			fsync(cpi->child_stdin);
 			
-			fprintf(f, "postwrite, pre pty read\n");
-			fflush(f);
+			p("postwrite, pre pty read\n");
 		}
 		else if(br < 0) {
 			if(errno == EIO) {
 			//	p("stdin read Werror: %d - %s\n", errno, strerror(errno))
 			}
 			else if(errno != EAGAIN) {
-				fprintf(f, "\nstdin read Qerror: %s\n", strerror(errno));
-				fflush(f);
+				p("\nstdin read Qerror: %s\n", strerror(errno));
 				break;
 			}
 			
@@ -365,8 +420,7 @@ int main(int argc, char* argv[]) {
 		int status;
 		int pid = waitpid(cpi->pid, &status, WNOHANG);
 		if(pid != 0) {
-			fprintf(f, "[pid = %d]exiting with status %d\n", pid, WEXITSTATUS(status));
-			fflush(f);
+			p("[pid = %d]exiting with status %d\n", pid, WEXITSTATUS(status));
 			break;
 		}
 		
@@ -378,11 +432,12 @@ int main(int argc, char* argv[]) {
 //		fprintf(f, ".");
 //			fflush(f);
 		if(0 && --limit <= 0) {
-			fprintf(f, "limit hit\n");
-			fflush(f);
+			p("limit hit\n");
 			break;
 		}
 	}
+	
+	p("done\n");
 	
 
 	fclose(f);

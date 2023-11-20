@@ -4,6 +4,8 @@
 
 #include "sti/sti.h"
 #include "sys.h"
+#include "git.h"
+#include "init.h"
 
 
 
@@ -41,8 +43,6 @@
 */
 
 
-// does not handle escaped slashes
-int mkdirp(char* path, mode_t mode);
 
 void make_check_dir(char* p, mode_t mode) {
 	
@@ -86,6 +86,30 @@ void initialize_path_for_system(char* path, char clobber) {
 	free(path_sysmeta);
 }
 
+
+int get_system_version(char* syspath) {
+	char* path = path_join(syspath, "fs_layout_version");
+	char* txt = read_whole_file(path, NULL);
+	if(!txt) return -1;
+	
+	int version = strtol(txt, NULL, 10);
+	
+	free(txt);
+	free(path);
+	
+	return version;
+}
+
+
+void write_system_version(char* syspath, int version) {
+	char* path = path_join(syspath, "fs_layout_version");
+	
+	FILE* f = fopen(path, "wb+");
+	fprintf(f, "%d", version);
+	fclose(f);
+	
+	free(path);
+}
 
 
 void initialize_user(char* syspath, char* username, char* email, char clobber) {
@@ -157,12 +181,51 @@ void initialize_user(char* syspath, char* username, char* email, char clobber) {
 	free(meta_watching);
 }
 
+
+
+
+typedef struct {
+	char* syspath;
+	int ret;
+} users_verify_info;
+
+static int verify_all_users_cb(char* fullPath, char* fileName, void* data) {
+	users_verify_info* info = (users_verify_info*)data;
+	info->ret |= verify_user(info->syspath, fileName);
+	return 0;
+}
+
+int verify_all_users(char* syspath) {
+	users_verify_info info = {
+		.syspath = syspath,
+		.ret = 0,
+	};
+	
+	char* users_dir = path_join(syspath, "users"); 
+	recurse_dirs(users_dir, verify_all_users_cb, &info, 0, FSU_EXCLUDE_FILES | FSU_INCLUDE_DIRS | FSU_NO_FOLLOW_SYMLINKS | FSU_EXCLUDE_HIDDEN);
+	free(users_dir);
+	
+	return info.ret;
+}
+
+
+
+int verify_user(char* syspath, char* username) {
+	return verify_user_repos(syspath, username);
+}
+
+
 int verify_repo_structure(char* syspath, char* username, char* reponame) {
+
+
 	char* repo_dir = path_join(syspath, "users", username, "repos", reponame);
 	make_check_dir(repo_dir, 0777);
 	
 	char* src_dir = path_join(repo_dir, "src.git");
 	make_check_dir(src_dir, 0777);
+	
+	char* worktrees_dir = path_join(repo_dir, "worktrees");
+	make_check_dir(worktrees_dir, 0777);
 	
 	char* pulls_dir = path_join(repo_dir, "pulls");
 	make_check_dir(pulls_dir, 0777);
@@ -170,21 +233,59 @@ int verify_repo_structure(char* syspath, char* username, char* reponame) {
 	char* issues_dir = path_join(repo_dir, "issues");
 	make_check_dir(issues_dir, 0777);
 	
-	char* issues_op_dir = path_join(issues_dir, "open");
-	make_check_dir(issues_op_dir, 0777);
+//	char* issues_op_dir = path_join(issues_dir, "open");
+//	make_check_dir(issues_op_dir, 0777);
+//	
+//	char* issues_cl_dir = path_join(issues_dir, "closed");
+//	make_check_dir(issues_cl_dir, 0777);
 	
-	char* issues_cl_dir = path_join(issues_dir, "closed");
-	make_check_dir(issues_cl_dir, 0777);
+	char* settings_dir = path_join(repo_dir, "settings");
+	if(!git_is_bare_repo(settings_dir)) {
+		git_init_bare(settings_dir);
+	}
 	
 	free(repo_dir);
 	free(src_dir);
+	free(worktrees_dir);
 	free(pulls_dir);
 	free(issues_dir);
-	free(issues_cl_dir);
-	free(issues_op_dir);
+//	free(issues_cl_dir);
+//	free(issues_op_dir);
+	free(settings_dir);
 	
 	return 0;
 }
+
+
+typedef struct {
+	char* syspath;
+	char* username;
+	int ret;
+} repo_verify_info;
+
+static int verify_user_repos_cb(char* fullPath, char* fileName, void* data) {
+	repo_verify_info* info = (repo_verify_info*)data;
+	
+	info->ret |= verify_repo_structure(info->syspath, info->username, fileName);
+
+	return 0;
+}
+
+
+int verify_user_repos(char* syspath, char* username) {
+	repo_verify_info info = {
+		.syspath = syspath,
+		.username = username,
+		.ret = 0,
+	};
+	
+	char* repo_dir = path_join(syspath, "users", username, "repos"); 
+	recurse_dirs(repo_dir, verify_user_repos_cb, &info, 0, FSU_EXCLUDE_FILES | FSU_INCLUDE_DIRS | FSU_NO_FOLLOW_SYMLINKS | FSU_EXCLUDE_HIDDEN);
+	free(repo_dir);
+	
+	return info.ret;
+}
+
 
 int initialize_repo(char* syspath, char* username, char* reponame) {
 	char type = get_file_type(syspath);
@@ -202,47 +303,8 @@ int initialize_repo(char* syspath, char* username, char* reponame) {
 	
 	verify_repo_structure(syspath, username, reponame);
 	
-	systemf("git --git-dir=%s init --bare --shared=all", syspath);
-	
 	return 0;
 }
 
-// does not handle escaped slashes
-int mkdirp(char* path, mode_t mode) {
-	
-	char* clean_path = strdup(path);
-	
-	// inch along the path creating each directory in line
-	for(char* p = clean_path; *p; p++) {
-		if(*p == '/') {
-			*p = 0;
-			
-			if(p != clean_path) {
-				if(mkdir(clean_path, mode)) {
-					if(errno != EEXIST) {
-						printf("foo '%s'\n", clean_path);				
-						goto FAIL;
-					}
-				}
-			}
-			
-			*p = '/';
-		}
-	}
-	
-	// mop up the last dir
-	if(mkdir(clean_path, mode)) {
-		if(errno != EEXIST) {
-			printf("bar\n");
-			goto FAIL;
-		}
-	}
-	
-	free(clean_path);
-	return 0;
-	
-FAIL:
-	free(clean_path);
-	return -1;
-}
+
 

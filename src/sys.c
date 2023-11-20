@@ -202,6 +202,43 @@ strlist* list_directories(char* path) {
 
 
 
-
+// does not handle escaped slashes
+int mkdirp(char* path, mode_t mode) {
+	
+	char* clean_path = strdup(path);
+	
+	// inch along the path creating each directory in line
+	for(char* p = clean_path; *p; p++) {
+		if(*p == '/') {
+			*p = 0;
+			
+			if(p != clean_path) {
+				if(mkdir(clean_path, mode)) {
+					if(errno != EEXIST) {
+						printf("foo '%s'\n", clean_path);				
+						goto FAIL;
+					}
+				}
+			}
+			
+			*p = '/';
+		}
+	}
+	
+	// mop up the last dir
+	if(mkdir(clean_path, mode)) {
+		if(errno != EEXIST) {
+			printf("bar\n");
+			goto FAIL;
+		}
+	}
+	
+	free(clean_path);
+	return 0;
+	
+FAIL:
+	free(clean_path);
+	return -1;
+}
 
 

@@ -19,11 +19,11 @@ void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con)
 	
 	cw("<table class=\"meta-links\"><tr>");
 	char* commits = git_count_commits(&ri->gr, "master"); 
-	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/commits\">", commits, " commits</a></td>");
+	cw("<td><a href=\"/", ri->username, "/", ri->project, "/commits\">", commits, " commits</a></td>");
 	free(commits);
 	
 	char* branches = git_count_branches(&ri->gr); 
-	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/branches\">", branches, " branch");
+	cw("<td><a href=\"/", ri->username, "/", ri->project, "/branches\">", branches, " branch");
 	if(!(branches[0] == '1' && branches[1] == 0)) cw("es");
 	cw("</a></td>");
 	free(branches);
@@ -31,7 +31,7 @@ void do_project_homepage(request_info* ri, scgi_request* req, connection_t* con)
 	char issues[30];
 	long issue_cnt = git_count_open_issues(&ri->gr); 
 	snprintf(issues, 30, "%ld", issue_cnt);
-	cw("<td><a href=\"/u/", ri->username, "/", ri->project, "/issues\">", issues, " issue");
+	cw("<td><a href=\"/", ri->username, "/", ri->project, "/issues\">", issues, " issue");
 	if(issue_cnt != 1) cw("s");
 	cw("</a></td>");
 	

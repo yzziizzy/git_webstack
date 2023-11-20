@@ -71,7 +71,10 @@ int create_issue(git_repo* gr, char* issue_username, char* issue_file_path) {
 	
 	for(int limit = 0; limit < 100; limit++) {
 		
-		issuedir = sprintfdup("%d-%.2d-%.2d_%s#%d - %.32s", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, issue_username, user_issue_num, issue_title_safe);
+		// TODO: find the highest issue number for this user 
+		
+//		issuedir = sprintfdup("%d-%.2d-%.2d_%s#%d - %.32s", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, issue_username, user_issue_num, issue_title_safe);
+		issuedir = sprintfdup("%s#%d", tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday, issue_username, user_issue_num, issue_title_safe);
 		abs_issue_path = path_join(open_path, issuedir);
 	
 		if(mkdir(abs_issue_path, 0777)) {

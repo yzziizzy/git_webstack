@@ -327,6 +327,15 @@ char* git_get_file(git_repo* gr, char* branch, char* path) {
 }
 
 
+/*
+void git_try_merge(git_repo* dst, char* dst_branch, git_repo* src, char* src_branch) {
+	
+	systemf("git --git-dir=%s/ merge --no-commit --no-ff %s/%s",  gr->abs_src_path, gr->abs_src_path, branch, path);
+	
+}
+*/
+
+
 
 void git_repo_parse_request(git_repo* gr, strlist* uri_parts) {
 	
@@ -344,10 +353,109 @@ void git_repo_parse_request(git_repo* gr, strlist* uri_parts) {
 	
 */
 	
+}
+
+
+char* git_merge_base(git_repo* gr, char* cma, char* cmb) {
+	return systemf("git --git-dir=%s/ merge-base '%s' '%s'",  gr->abs_src_path, cma, cmb);
+}
+
+char* git_merge_tree(git_repo* gr, char* cma, char* cmb) {
+	char* raw = systemf("git --git-dir=%s/ merge-tree -z '%s' '%s'",  gr->abs_src_path, cma, cmb);
 	
 	
+	printf("raw: %s\n", raw);
+
+
+
+	printf("%s NYI\n", __func__);
+	exit(1);
+}
+
+char* git_merge_tree_with_base(git_repo* gr, char* cmbase, char* cma, char* cmb) {
+	char* raw = systemf("git --git-dir=%s/ merge-tree -z '%s' '%s' '%s'",  gr->abs_src_path, cmbase, cma, cmb);
+
+
+	printf("%s NYI\n", __func__);
+	exit(1);
+}
+
+
+void git_list_worktrees(git_repo* gr, strlist* worktrees) {
+	
+	// returns null-separated list with double null between items
+	char* raw = systemf("git --git-dir=%s/ worktree list --porcelain -z",  gr->abs_src_path);
+	
+	printf("%s NYI\n", __func__);
+	exit(1);
 	
 }
+
+
+
+
+
+int git_is_bare_repo(char* path) {
+	char* res = systemf("git --git-dir=%s rev-parse --is-bare-repository", path);
+	if(!res) return 0;
+	
+	int ret = 0 == strncmp("true", res, 4);
+	free(res);
+	
+	return ret;
+}
+	
+
+int git_init_bare(char* path) {
+	
+	char type = get_file_type(path);
+	if(type && type != 'd') {
+		fprintf(stderr, "Init error: '%s' already exists and is not a directory.\n", path);
+		return 1;
+	}
+	else if(!type) {
+		mkdirp(path, 0777);
+	}
+	
+	char* cmd = sprintfdup("git --git-dir=%s init --bare --shared=all", path);
+	system(cmd);
+	free(cmd);
+	
+	return 0;
+}
+
+
+int git_is_full_repo(char* path) {
+	char* res = systemf("git --git-dir=%s rev-parse --is-repository", path);
+	if(!res) return 0;
+	
+	int ret = 0 == strncmp("true", res, 4);
+	free(res);
+	
+	return ret;
+}
+	
+
+int git_init_full_repo(char* path) {
+	
+	char type = get_file_type(path);
+	if(type && type != 'd') {
+		fprintf(stderr, "Init error: '%s' already exists and is not a directory.\n", path);
+		return 1;
+	}
+	else if(!type) {
+		mkdirp(path, 0777);
+	}
+	
+	char* cmd = sprintfdup("git --git-dir=%s init --bare --shared=all", path);
+	system(cmd);
+	free(cmd);
+	
+	return 0;
+}
+
+
+
 
 
 
