@@ -229,7 +229,7 @@ void git_browse_handler(void* user_data, scgi_request* req, connection_t* con) {
 	
 	
 	request_info ri = {0};
-	
+	ri.rm = rm;
 	
 	ri.uri_parts = strlist_new();
 	
