@@ -9,6 +9,7 @@
 
 #include "../src/sti/sti.h"
 #include "../src/git.h"
+#include "../src/sys.h"
 
 #define p(...) \
 do {\
@@ -41,7 +42,7 @@ int read_line_len(char* buf) {
 	return len;
 }
 
-
+/*
 char get_file_type(char* path) {
 	struct stat st;
 	int res = stat(path, &st);
@@ -52,12 +53,12 @@ char get_file_type(char* path) {
 	if(st.st_mode & S_IFLNK) return 'l';
 	
 	return 'o';
-}
-
+}//*/
+/*
 int is_dir(char* path) {
 	return 'd' == get_file_type(path);
 }
-
+/*
 int is_file(char* path) {
 	return 'f' == get_file_type(path);
 }
@@ -65,7 +66,7 @@ int is_file(char* path) {
 int file_doesnt_exist(char* path) {
 	return 0 == get_file_type(path);
 }
-
+*/
 
 
 int main(int argc, char* argv[]) {
@@ -196,7 +197,7 @@ int main(int argc, char* argv[]) {
 				if(0 != strcmp(ssh_username, username)) {
 				
 					git_repo gr = {
-						.abs_src_path = path_join(user_dir, "repos", reponame, "settings");
+						.abs_src_path = path_join(user_dir, "repos", reponame, "settings"),
 					};
 					
 					char* pushers_src = git_get_file(&gr, "master", "pushers");
@@ -305,13 +306,16 @@ int main(int argc, char* argv[]) {
 		int bw;
 		int totalWritten = 0;
 		do {
+			p("waiting to read\n");
 			bw = read(cpi->child_stdout, buf, BUFSZ);
-			totalWritten += bw;
+			
 			
 
 			
-//			p("read %d\n", bw)
+			p("read %d\n", bw)
 			if(bw > 0) {
+				totalWritten += bw;
+			
 				memcpy(line + lineLen, buf, bw);
 				lineLen += bw;
 				line[lineLen] = 0;
@@ -364,15 +368,20 @@ int main(int argc, char* argv[]) {
 //				fflush(f);
 			}
 			else if(bw < 0) {
+				p("less than one\n")
 				if(errno == EIO) {
-				//	fprintf(f, "\npty IO Ferror: %s\n", strerror(errno));
+					p("\npty IO Ferror: %s\n", strerror(errno));
 			//		fflush(f);
 				}
 				else if(errno != EAGAIN && errno != EWOULDBLOCK) {
 					p("\npty read Verror: %s\n", strerror(errno));
 					exit(1);
 				}
-				//p("Zerror: %d - %s\n", errno, strerror(errno))
+				else if(errno == EAGAIN) {
+					p("EAGAIN");
+					break;
+				}
+				p("Zerror: %d - %s\n", errno, strerror(errno))
 				break;
 			}
 			else {

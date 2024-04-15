@@ -312,6 +312,8 @@ struct child_process_info* exec_process_pipe(char* exec_path, char* args[]) {
 		close(err[1]);
 		
 		
+//		fcntl(in[WR], F_SETFL, fcntl(in[WR], F_GETFL) | O_NONBLOCK);
+		
 		// die when the parent does (linux only)
 		prctl(PR_SET_PDEATHSIG, SIGHUP);
 		
@@ -330,9 +332,9 @@ struct child_process_info* exec_process_pipe(char* exec_path, char* args[]) {
 		cpi->child_stdin = in[WR];
 		cpi->child_stdout = out[RE];
 		cpi->child_stderr = err[RE];
-		cpi->f_stdin = fdopen(cpi->child_stdin, "wb");
-		cpi->f_stdout = fdopen(cpi->child_stdout, "rb");
-		cpi->f_stderr = fdopen(cpi->child_stderr, "rb");
+		//cpi->f_stdin = fdopen(cpi->child_stdin, "wb"); // disabled for git clone debugging
+		//cpi->f_stdout = fdopen(cpi->child_stdout, "rb");
+		//cpi->f_stderr = fdopen(cpi->child_stderr, "rb");
 		
 		// set to non-blocking
 		fcntl(cpi->child_stdout, F_SETFL, fcntl(cpi->child_stdout, F_GETFL) | O_NONBLOCK);

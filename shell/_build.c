@@ -13,7 +13,7 @@
 
 
 char* sources[] = {
-	"../src/cproc.c",
+	"cproc.c",
 	"../src/git.c",
 	"../src/sys.c",
 	"main.c",
