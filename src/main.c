@@ -49,6 +49,11 @@ int main(int argc, char* argv[]) {
 	char* username_to_init = NULL;
 	char* repos_path = NULL;
 	
+	char* src_username = NULL;
+	char* src_repo = NULL;
+	char* dst_username = NULL;
+	char* dst_repo = NULL;
+	
 	char* issue_username = NULL;
 	char* issue_file_path = NULL;
 	char* target_repo = NULL;
@@ -69,7 +74,23 @@ int main(int argc, char* argv[]) {
 			if(argv[ai][1] == '-') {
 				char* cmd = argv[ai] + 2;
 				
-				if(0 == strcmp(cmd, "init")) {
+				if(0 == strcmp(cmd, "help")) {
+					// next arg is the target path
+					path_to_init = argv[++ai];
+					if(path_to_init == NULL) {
+						fprintf(stderr, 
+							"Commands:\n"
+							"\t--init <path_to_initialize>\n"
+							"\t<base_path> --verify \n"
+							"\t<base_path> --add-user <username> <email>\n"
+							"\t<base_path> --add-repo <username> <repo_name>\n"
+							"\t<base_path> --new-issue <posting_user> <repo_username>/<repo> <issue_file>\n"
+							"\t<base_path> --add-comment <posting_user> <repo_username>/<repo>/<issue> <comment_file>\n"
+						);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "init")) {
 					// next arg is the target path
 					path_to_init = argv[++ai];
 					if(path_to_init == NULL) {
@@ -100,6 +121,22 @@ int main(int argc, char* argv[]) {
 					}
 					if(!repo_to_create || !target_username) {
 						fprintf(stderr, "Usage: %s --add-repo <username> <repo_name>\n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "fork")) {
+					// next arg is the target path
+					if(argc >= ai + 2) {
+						src_username = argv[++ai];
+						src_repo = argv[++ai];
+						dst_username = argv[++ai];
+						if(ai < argc) {
+							dst_repo = argv[++ai];
+							printf("dst repo: %s\n", dst_repo);
+						}
+					}
+					if(!src_username || !src_repo || !dst_username) {
+						fprintf(stderr, "Usage: %s --fork <src_username> <src_repo> <dst_username> [<dst_repo>]\n", argv[0]);
 						exit(1);
 					}
 				}
@@ -198,6 +235,12 @@ int main(int argc, char* argv[]) {
 		
 		free_git_issue(&gi);
 		return 0;
+	}
+	else if(src_username && src_repo && dst_username) {
+		if(!dst_repo) dst_repo = src_repo;
+		
+		printf("fork NYI\n");
+		return 1;
 	}
 	
 	

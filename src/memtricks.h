@@ -33,6 +33,7 @@ char* strndup_current_alloc(const char* const s, size_t n);
 
 
 #ifndef NO_MEM_TRICKS_DEFINES
+	
 	#define malloc(sz) (g_current_alloc_info->m_alloc(g_current_alloc_info, sz))
 	#define calloc(n, sz) (g_current_alloc_info->m_calloc(g_current_alloc_info, n, sz))
 	#define realloc(p, sz) (g_current_alloc_info->m_realloc(g_current_alloc_info, p, sz))
@@ -40,6 +41,7 @@ char* strndup_current_alloc(const char* const s, size_t n);
 	
 	#define strdup(s) strdup_current_alloc(s)
 	#define strndup(s, n) strndup_current_alloc(s, n)
+
 #endif
 
 extern struct alloc_info g_shitty_arena_alloc_info;
