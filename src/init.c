@@ -307,4 +307,77 @@ int initialize_repo(char* syspath, char* username, char* reponame) {
 }
 
 
+int fork_repo(char* syspath, char* src_user, char* src_reponame, char* dst_user, char* dst_reponame) {
+	// basically a new repo, except copy the src.git dir from the old one
+	
+	char* user_repos = path_join(syspath, "users", src_user, "repos");
+		if(!is_dir(user_repos)) {
+		fprintf(stderr, "Init repo error: '%s' is not a valid username.\n", src_user);
+		exit(1);
+	}
+	
+	
+	char* src_user_repos = path_join(syspath, "users", src_user, "repos");
+		if(!is_dir(src_user_repos)) {
+		fprintf(stderr, "Fork repo error: '%s' is not a valid username.\n", src_user);
+		exit(1);
+	}
+	
+	char* src_repo_path = path_join(src_user_repos, src_reponame);
+		if(!is_dir(src_repo_path)) {
+		fprintf(stderr, "Fork repo error: '%s'/'%s' is not a valid repo.\n", src_user, src_reponame);
+		exit(1);
+	}
+	
+	char* dst_user_repos = path_join(syspath, "users", dst_user, "repos");
+		if(!is_dir(dst_user_repos)) {
+		fprintf(stderr, "Fork repo error: '%s' is not a valid username.\n", dst_user);
+		exit(1);
+	}
+	
+	char* dst_repo_path = path_join(dst_user_repos, dst_reponame);
+		if(is_dir(dst_repo_path)) {
+		fprintf(stderr, "Fork repo error: '%s'/'%s' already exists.\n", dst_user, dst_reponame);
+		exit(1);
+	}
+	
+	make_check_dir(dst_repo_path, 0777);
+	
+	char* s = systemf("cp -r \"%s/src.git\" \"%s/src.git\"", src_repo_path, dst_repo_path);
+	if(!s) {
+		fprintf(stderr, "Fork repo error: failed to copy \"%s/src.git\" to \"%s/src.git\"\n", src_repo_path, dst_repo_path);
+		exit(1);		
+	}
+	free(s);
+		
+	verify_repo_structure(syspath, dst_user, dst_reponame);
+	
+	return 0;
+}
 
+
+
+
+int delete_repo(char* syspath, char* username, char* reponame) {
+
+	char* user_repos = path_join(syspath, "users", username, "repos");
+		if(!is_dir(user_repos)) {
+		fprintf(stderr, "rm repo error: '%s' is not a valid username.\n", username);
+		exit(1);
+	}
+
+	char* repo_path = path_join(syspath, "users", username, "repos", reponame);
+		if(!is_dir(repo_path)) {
+		fprintf(stderr, "rm repo error: '%s'/'%s' does not exist\n", username, reponame);
+		exit(1);
+	}
+	
+	char* s = systemf("rm -rf \"%s\"", repo_path);
+	if(!s) {
+		fprintf(stderr, "rm repo error: failed to delete \"%s\"\n", repo_path);
+		exit(1);		
+	}
+	free(s);
+	
+	return 0;
+}

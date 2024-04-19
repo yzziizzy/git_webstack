@@ -6,8 +6,10 @@
 void initialize_path_for_system(char* path, char clobber);
 void initialize_user(char* syspath, char* username, char* email, char clobber);
 int initialize_repo(char* syspath, char* username, char* reponame);
+int delete_repo(char* syspath, char* username, char* reponame);
 int create_issue(git_repo* gr, char* issue_username, char* issue_file_path);
 int issue_add_comment(git_issue* gi, char* comment_username, char* comment_file_path);
+int fork_repo(char* syspath, char* src_user, char* src_reponame, char* dst_user, char* dst_reponame);
 
 int verify_all_users(char* syspath);
 int verify_user(char* syspath, char* username);

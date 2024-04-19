@@ -58,6 +58,7 @@ int main(int argc, char* argv[]) {
 	char* issue_file_path = NULL;
 	char* target_repo = NULL;
 	char* repo_to_create = NULL;
+	char* repo_to_rm = NULL;
 	char* target_username = NULL;
 	
 	char* comment_username = NULL;
@@ -84,6 +85,7 @@ int main(int argc, char* argv[]) {
 							"\t<base_path> --verify \n"
 							"\t<base_path> --add-user <username> <email>\n"
 							"\t<base_path> --add-repo <username> <repo_name>\n"
+							"\t<base_path> --fork <src_username> <src_repo> <dst_username> [<dst_repo>] \n"
 							"\t<base_path> --new-issue <posting_user> <repo_username>/<repo> <issue_file>\n"
 							"\t<base_path> --add-comment <posting_user> <repo_username>/<repo>/<issue> <comment_file>\n"
 						);
@@ -132,10 +134,20 @@ int main(int argc, char* argv[]) {
 						dst_username = argv[++ai];
 						if(ai < argc) {
 							dst_repo = argv[++ai];
-							printf("dst repo: %s\n", dst_repo);
 						}
 					}
 					if(!src_username || !src_repo || !dst_username) {
+						fprintf(stderr, "Usage: %s --fork <src_username> <src_repo> <dst_username> [<dst_repo>]\n", argv[0]);
+						exit(1);
+					}
+				}
+				else if(0 == strcmp(cmd, "rm-repo")) {
+					// next arg is the target path
+					if(argc >= ai + 2) {
+						target_username = argv[++ai];
+						repo_to_rm = argv[++ai];
+					}
+					if(!target_username || !repo_to_rm) {
 						fprintf(stderr, "Usage: %s --fork <src_username> <src_repo> <dst_username> [<dst_repo>]\n", argv[0]);
 						exit(1);
 					}
@@ -212,6 +224,10 @@ int main(int argc, char* argv[]) {
 		initialize_repo(repos_path, target_username, repo_to_create);
 		return 0;
 	}
+	else if(repo_to_rm) {
+		delete_repo(repos_path, target_username, repo_to_rm);
+		return 0;
+	}
 	else if(issue_username) {
 		git_repo gr = {0};
 		if(git_repo_init_short(&gr, repos_path, target_repo)) {
@@ -239,8 +255,9 @@ int main(int argc, char* argv[]) {
 	else if(src_username && src_repo && dst_username) {
 		if(!dst_repo) dst_repo = src_repo;
 		
-		printf("fork NYI\n");
-		return 1;
+		fork_repo(repos_path, src_username, src_repo, dst_username, dst_repo);
+		
+		return 0;
 	}
 	
 	

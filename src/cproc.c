@@ -117,6 +117,7 @@ char* span_arg(char* in) {
 		for(s = in + 1; *s; s++) {
 			if(*s == quote) {
 				if(*(s-1) == '\\') continue;
+				s++;
 				break;
 			}
 		}
@@ -164,7 +165,12 @@ static char** split_args(char* str, int* nargs_out) {
 		
 		char* s = span_arg(str);
 		if(str != s) {
-			args[n++] = strndup(str, s - str);
+			int len = s - str;
+			if((*str == '"' && s[-1] == '"') || (*str == '\'' && s[-1] == '\'')) {
+				str++;
+				len -= 2;
+			}
+			args[n++] = strndup(str, len);
 		}
 		
 		str = s;
